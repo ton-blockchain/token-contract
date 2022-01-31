@@ -1,0 +1,314 @@
+"Asm.fif" include
+// automatically generated from `../../stdlib.fc` `nft.fc` 
+PROGRAM{
+  DECLPROC load_data
+  DECLPROC store_data
+  DECLPROC notify
+  DECLPROC transfer_ownership
+  DECLPROC after_code_upgrade
+  DECLPROC edit
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  107853 DECLMETHOD get_name
+  DECLPROC parse_std_none_addr
+  102351 DECLMETHOD get_nft_data
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    64 LDU	//  _5 ds
+    LDMSGADDR	//  index collection ds
+    DUP	//  index collection ds ds
+    SBITS	//  index collection ds _10
+    0 GTINT	//  index collection ds _12
+    IFJMP:<{	//  index collection ds
+      -1 PUSHINT	//  index collection ds _13=-1
+      SWAP	//  index collection _13=-1 ds
+      LDMSGADDR	//  index collection _13=-1 _14 ds
+      LDMSGADDR	//  index collection _13=-1 _14 _16 ds
+      LDREF	//  index collection _13=-1 _14 _16 _33 _32
+      DROP	//  index collection _13=-1 _14 _16 _18
+      s3 s5 XCHG
+      s3 s4 XCHG	//  _13=-1 index collection _14 _16 _18
+    }>	//  index collection ds
+    DROP	//  index collection
+    0 PUSHINT	//  index collection _20=0
+    -ROT
+    PUSHNULL
+    PUSHNULL
+    PUSHNULL	//  _20=0 index collection _21 _22 _23
+  }>
+  store_data PROC:<{
+    //  ds ds ds ds ds
+    //  index collection owner editor content
+    s0 s4 XCHG
+    NEWC	//  content collection owner editor index _6
+    64 STU	//  content collection owner editor _8
+    s0 s3 XCHG2	//  content editor owner _8 collection
+    STSLICER	//  content editor owner _9
+    SWAP	//  content editor _9 owner
+    STSLICER	//  content editor _10
+    SWAP	//  content _10 editor
+    STSLICER	//  content _11
+    STREF	//  _12
+    ENDC	//  _13
+    c4 POP
+  }>
+  notify PROC:<{
+    //  to op amount query_id data1 payload
+    s5 PUSH	//  to op amount query_id data1 payload to
+    2 PLDU	//  to op amount query_id data1 payload _7
+    0 EQINT	//  to op amount query_id data1 payload _9
+    IFJMP:<{	//  to op amount query_id data1 payload
+      6 BLKDROP	// 
+    }>	//  to op amount query_id data1 payload
+    0 PUSHINT	//  to op amount query_id data1 payload _11=0
+    16 PUSHINT	//  to op amount query_id data1 payload _11=0 _12=16
+    NEWC	//  to op amount query_id data1 payload _11=0 _12=16 _13
+    6 STU	//  to op amount query_id data1 payload _11=0 _15
+    s0 s7 XCHG2	//  _11=0 op amount query_id data1 payload _15 to
+    STSLICER	//  _11=0 op amount query_id data1 payload _16
+    s0 s4 XCHG2	//  _11=0 op payload query_id data1 _16 amount
+    STGRAMS	//  _11=0 op payload query_id data1 _17
+    s1 s5 XCHG	//  data1 op payload query_id _11=0 _17
+    107 STU	//  data1 op payload query_id _31
+    s1 s3 XCHG	//  data1 query_id payload op _31
+    32 STU	//  data1 query_id payload _33
+    s1 s2 XCHG	//  data1 payload query_id _33
+    64 STU	//  data1 payload msg
+    s2 PUSH	//  data1 payload msg data1
+    ISNULL	//  data1 payload msg _36
+    IF:<{	//  data1 payload msg
+      ROT	//  payload msg data1
+      STSLICER	//  payload msg
+      SWAP	//  msg payload
+    }>ELSE<{
+      s2 POP	//  msg payload
+    }>
+    DUP	//  msg payload payload
+    ISNULL	//  msg payload _38
+    IF:<{	//  msg payload
+      STSLICER	//  msg
+    }>ELSE<{
+      DROP	//  msg
+    }>
+    ENDC	//  _40
+    1 PUSHINT	//  _40 _41=1
+    SENDRAWMSG
+  }>
+  transfer_ownership PROC:<{
+    //  sender query_id msg_body
+    LDMSGADDR	//  sender query_id new_owner msg_body
+    load_data CALLDICT	//  sender query_id new_owner msg_body _28 _29 _30 _31 _32 _33
+    s5 POP	//  sender query_id new_owner msg_body content index collection owner editor
+    s8 s1 XCPU	//  editor query_id new_owner msg_body content index collection owner sender owner
+    SDEQ	//  editor query_id new_owner msg_body content index collection owner _14
+    401 THROWIFNOT
+    s1 s3 s0 XCHG3
+    s5 s7 s(-1) PUXC2	//  owner query_id new_owner msg_body index collection new_owner editor content
+    store_data CALLDICT
+    50000000 PUSHINT	//  owner query_id new_owner msg_body _17=50000000
+    2 PUSHINT	//  owner query_id new_owner msg_body _17=50000000 _18=2
+    RAWRESERVE
+    LDGRAMS	//  owner query_id new_owner forward_amount payload
+    OVER	//  owner query_id new_owner forward_amount payload forward_amount
+    IF:<{	//  owner query_id new_owner forward_amount payload
+      0x11 PUSHINT	//  owner query_id new_owner forward_amount payload _24
+      s3 s5 XCHG
+      s4 s1 s4 XCHG3
+      s3 s3 XCHG2	//  new_owner _24 forward_amount query_id owner payload
+      notify INLINECALLDICT
+    }>ELSE<{
+      5 BLKDROP	// 
+    }>
+  }>
+  after_code_upgrade PROC:<{
+    //  data query_id
+    2DROP	// 
+  }>
+  edit PROC:<{
+    //  sender query_id msg_body
+    load_data CALLDICT	//  sender query_id msg_body _52 _53 _54 _55 _56 _57
+    s5 POP	//  sender query_id msg_body content index collection owner editor
+    s7 s7 XCPU	//  editor query_id msg_body content index collection owner sender editor
+    SDEQ	//  editor query_id msg_body content index collection owner _11
+    401 THROWIFNOT
+    s0 s4 XCHG	//  editor query_id owner content index collection msg_body
+    8 LDU	//  editor query_id owner content index collection op msg_body
+    OVER	//  editor query_id owner content index collection op msg_body op
+    0 EQINT	//  editor query_id owner content index collection op msg_body _18
+    IF:<{	//  editor query_id owner content index collection op msg_body
+      s4 POP	//  editor query_id owner msg_body index collection op
+      s0 s3 XCHG	//  editor query_id owner op index collection msg_body
+      LDREF	//  editor query_id owner op index collection content msg_body
+      s1 s4 XCHG	//  editor query_id owner content index collection op msg_body
+    }>	//  editor query_id owner content index collection op msg_body
+    OVER	//  editor query_id owner content index collection op msg_body op
+    1 EQINT	//  editor query_id owner content index collection op msg_body _22
+    IF:<{	//  editor query_id owner content index collection op msg_body
+      LDMSGADDR	//  editor query_id owner content index collection op new_editor msg_body
+      LDGRAMS	//  editor query_id owner content index collection op new_editor forward_amount msg_body
+      s0 s1 PUSH2	//  editor query_id owner content index collection op new_editor forward_amount msg_body payload forward_amount
+      IF:<{	//  editor query_id owner content index collection op new_editor forward_amount msg_body payload
+        0x14 PUSHINT	//  editor query_id owner content index collection op new_editor forward_amount msg_body payload _30
+        s4 PUSH
+        s4 s3 s4 XCHG3
+        s11 s12 s12 PUXC2	//  msg_body query_id owner content index collection op new_editor new_editor _30 forward_amount query_id editor payload
+        notify INLINECALLDICT
+      }>ELSE<{
+        DROP
+        s9 POP
+        DROP	//  msg_body query_id owner content index collection op new_editor
+      }>	//  msg_body query_id owner content index collection op editor
+      s0 s7 XCHG	//  editor query_id owner content index collection op msg_body
+    }>	//  editor query_id owner content index collection op msg_body
+    SWAP	//  editor query_id owner content index collection msg_body op
+    2 EQINT	//  editor query_id owner content index collection msg_body _33
+    IF:<{	//  editor query_id owner content index collection msg_body
+      LDREF	//  editor query_id owner content index collection new_code msg_body
+      OVER	//  editor query_id owner content index collection new_code msg_body new_code
+      SETCODE
+      DUP	//  editor query_id owner content index collection new_code msg_body msg_body
+      SREFS	//  editor query_id owner content index collection new_code msg_body _38
+      0 GTINT	//  editor query_id owner content index collection new_code msg_body _40
+      IF:<{	//  editor query_id owner content index collection new_code msg_body
+        LDREF	//  editor query_id owner content index collection new_code _69 _68
+        DROP	//  editor query_id owner content index collection new_code _42
+        CTOS	//  editor query_id owner content index collection new_code post_process
+        SWAP	//  editor query_id owner content index collection post_process new_code
+        CTOS	//  editor query_id owner content index collection post_process _45
+        BLESS	//  editor query_id owner content index collection post_process _46
+        c3 POP
+        s0 s5 XCHG2	//  editor collection owner content index post_process query_id
+        after_code_upgrade CALLDICT
+        0 THROW
+      }>ELSE<{
+        2DROP
+        s4 POP	//  editor collection owner content index
+      }>
+    }>ELSE<{
+      DROP
+      s4 POP	//  editor collection owner content index
+    }>
+    s4 s4 XCHG2	//  index collection owner editor content
+    store_data CALLDICT
+  }>
+  recv_internal PROC:<{
+    //  smc_balance msg_value msg msg_body
+    s3 POP	//  msg_body msg_value msg
+    s2 PUSH	//  msg_body msg_value msg msg_body
+    SEMPTY	//  msg_body msg_value msg _4
+    IFJMP:<{	//  msg_body msg_value msg
+      3 BLKDROP	// 
+    }>	//  msg_body msg_value msg
+    CTOS	//  msg_body msg_value cs
+    4 LDU	//  msg_body msg_value flags cs
+    SWAP
+    1 PUSHINT	//  msg_body msg_value cs flags _11=1
+    AND	//  msg_body msg_value cs _12
+    IFJMP:<{	//  msg_body msg_value cs
+      3 BLKDROP	// 
+    }>	//  msg_body msg_value cs
+    load_data CALLDICT	//  msg_body msg_value cs _87 _88 _89 _90 _91 _92
+    6 BLKDROP	//  msg_body msg_value cs
+    load_data CALLDICT	//  msg_body msg_value cs _93 _94 _95 _96 _97 _98
+    3 BLKDROP	//  msg_body msg_value cs init? index collection
+    s0 s3 XCHG	//  msg_body msg_value collection init? index cs
+    LDMSGADDR	//  msg_body msg_value collection init? index _100 _99
+    DROP	//  msg_body msg_value collection init? index sender_address
+    s0 s2 XCHG	//  msg_body msg_value collection sender_address index init?
+    NOT	//  msg_body msg_value collection sender_address index _25
+    IFJMP:<{	//  msg_body msg_value collection sender_address index
+      s3 POP	//  msg_body index collection sender_address
+      s1 s(-1) PUXC	//  msg_body index collection collection sender_address
+      SDEQ	//  msg_body index collection _26
+      IFJMP:<{	//  msg_body index collection
+        s0 s2 XCHG	//  collection index msg_body
+        LDMSGADDR	//  collection index _27 msg_body
+        LDMSGADDR	//  collection index _27 _29 msg_body
+        LDREF	//  collection index _27 _29 _106 _105
+        DROP	//  collection index _27 _29 _31
+        s3 s4 XCHG	//  index collection _27 _29 _31
+        store_data CALLDICT
+      }>	//  msg_body index collection
+      2 1 BLKDROP2	//  collection
+      0 PUSHINT	//  collection _35=0
+      16 PUSHINT	//  collection _35=0 _36=16
+      NEWC	//  collection _35=0 _36=16 _37
+      6 STU	//  collection _35=0 _39
+      ROT	//  _35=0 _39 collection
+      STSLICER	//  _35=0 _40
+      OVER	//  _35=0 _40 _41=0
+      STGRAMS	//  _35=0 _42
+      106 STU	//  msg
+      ENDC	//  _55
+      160 PUSHINT	//  _55 _58
+      SENDRAWMSG
+    }>	//  msg_body msg_value collection sender_address index
+    DROP
+    NIP	//  msg_body msg_value sender_address
+    s0 s2 XCHG	//  sender_address msg_value msg_body
+    32 LDU	//  sender_address msg_value op msg_body
+    64 LDU	//  sender_address msg_value op query_id msg_body
+    s2 PUSH	//  sender_address msg_value op query_id msg_body op
+    1 EQINT	//  sender_address msg_value op query_id msg_body _69
+    IFJMP:<{	//  sender_address msg_value op query_id msg_body
+      2 2 BLKDROP2	//  sender_address query_id msg_body
+      transfer_ownership CALLDICT
+    }>	//  sender_address msg_value op query_id msg_body
+    s0 s2 XCHG	//  sender_address msg_value msg_body query_id op
+    2 EQINT	//  sender_address msg_value msg_body query_id _72
+    IFJMP:<{	//  sender_address msg_value msg_body query_id
+      BALANCE	//  sender_address msg_value msg_body query_id _73
+      FIRST	//  sender_address msg_value msg_body query_id _74
+      s0 s3 XCHG2	//  sender_address query_id msg_body _74 msg_value
+      SUB	//  sender_address query_id msg_body _75
+      2 PUSHINT	//  sender_address query_id msg_body _75 _76=2
+      RAWRESERVE
+      edit CALLDICT
+    }>	//  sender_address msg_value msg_body query_id
+    4 BLKDROP	// 
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  get_name PROC:<{
+    // 
+    load_data CALLDICT	//  _11 _12 _13 _14 _15 _16
+    5 1 BLKDROP2	//  content
+    CTOS	//  cs
+    LDREF	//  _18 _17
+    DROP	//  _9
+  }>
+  parse_std_none_addr PROC:<{
+    //  addr
+    DUP	//  addr addr
+    SBITS	//  addr _1
+    2 EQINT	//  addr _3
+    IFJMP:<{	//  addr
+      DROP	// 
+      -2 PUSHINT	//  _4=-2
+      DUP	//  _4=-2 _5=-2
+    }>	//  addr
+    REWRITESTDADDR	//  _7 _8
+  }>
+  get_nft_data PROC:<{
+    // 
+    load_data CALLDICT	//  init index collection owner editor content
+    CTOS	//  init index collection owner editor cs
+    LDREF	//  init index collection owner editor _24 _23
+    NIP	//  init index collection owner editor cs
+    LDREF	//  init index collection owner editor _26 _25
+    DROP	//  init index collection owner editor individual_content
+    s0 s3 XCHG	//  init index individual_content owner editor collection
+    parse_std_none_addr CALLDICT	//  init index individual_content owner editor _27 _28
+    s0 s3 XCHG	//  init index individual_content _28 editor _27 owner
+    parse_std_none_addr CALLDICT	//  init index individual_content _28 editor _27 _29 _30
+    s0 s3 XCHG	//  init index individual_content _28 _30 _27 _29 editor
+    parse_std_none_addr CALLDICT	//  init index individual_content _28 _30 _27 _29 _31 _32
+    s3 s6 XCHG
+    s1 s0 s4 XCHG3
+    s0 s3 XCHG	//  init index _27 _28 _29 _30 _31 _32 individual_content
+  }>
+}END>c

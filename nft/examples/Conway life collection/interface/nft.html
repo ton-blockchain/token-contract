@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <script
+    type="text/javascript"
+    src="./tonweb-0.0.27.js"
+  ></script>
+  <script type="text/javascript" src="nft.js"></script>
+  <body>
+    <div class="wrapper">
+      <header class="tabs">
+        <a href="index.html">Collection</a>
+        <a class="active" href="nft.html">Individual NFT</a>
+      </header>
+      <h1>Individual NFT</h1>
+      <div class="panel" id="nft-check-form">
+        <span class="label">NFT address</span>
+        <div class="nft-form-field">
+          <input class="text-field" id="nft_address" type="text" />
+          <button class="button-field" id="check">Check NFT</button>
+        </div>
+        <div class="example-block">
+          <span class="label">Example</span>
+          <code>EQDhiAAf61NkVm95NAt1yjGZOQbw5aLxzvykOGEsw93wNxtC</code>
+        </div>
+      </div>
+
+      <div id="nft-item" class="nft-item">
+        <div class="nft-fields">
+          <div class="field">
+            <div class="label">Index</div>
+            <div class="value" id="index"></div>
+          </div>
+          <div class="field">
+            <div class="label">Collection</div>
+            <div class="value" id="collection_address"></div>
+          </div>
+          <div class="field">
+            <div class="label">Owner <span id="is_owner"></span>></div>
+            <div class="value" id="owner_address"></div>
+          </div>
+          <div class="field">
+            <div class="label">Editor</div>
+            <div class="value" id="editor_address"></div>
+          </div>
+          <div class="field">
+            <div class="label">Uri</div>
+            <div class="value" id="uri"></div>
+          </div>
+        </div>
+        <div id="content"></div>
+      </div>
+
+      <div id="transfer-panel">
+      <h3>You can send your nft via tonweb plugin</h3>
+      <div class="panel">
+        <span class="label">To address</span>
+        <div class="nft-form-field">
+          <input id="toAddressInput" class="text-field" type="text" />
+          <button id="send" class="button-field">Send NFT</button>
+        </div>
+      </div>
+      </div>
+    </div>
+    <script>
+      //<img src="t2.png" style="image-rendering: pixelated;"></img>
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const myParam = urlParams.get("token");
+
+      const mainnetRpc = "https://tonchain.co/api/v2/jsonRPC";
+      const prv = new TonWeb.HttpProvider(mainnetRpc);
+      let global_nft = null;
+
+      document.getElementById("check").addEventListener("click", async () => {
+        let address = document.getElementById("nft_address").value;
+        let nft = new NFT(prv, { address: address });
+        await nft.loadData();
+        console.log(nft);
+        console.log(nft.collection_address.toString(true, true, true), nft.owner.toString(
+          true,
+          true,
+          true
+        ), nft.editor.toString(true, true, true));
+        global_nft = nft;
+        document.getElementById("index").innerText = nft.index;
+        document.getElementById("collection_address").innerText =
+          nft.collection_address.toString(true, true, true);
+        document.getElementById("owner_address").innerText = nft.owner.toString(
+          true,
+          true,
+          true
+        );
+        try {
+          document.getElementById("editor_address").innerText =
+            nft.editor.toString(true, true, true);
+        } catch {}
+         document.getElementById("uri").innerText = nft.uri;
+        document.getElementById(
+          "content"
+        ).innerHTML = `<img style="image-rendering: pixelated; width:100px;" src="data:image/png;base64,${
+          parse_nft_content(nft.content)["png/base64"]
+        }"></img>`;
+        let account = ""
+        try{
+          const accounts = await window.ton.send("ton_requestAccounts");
+          account = accounts[0];
+        } catch {};
+        console.log(account);
+
+        if (
+          account.toString(true, true, true) ==
+          nft.owner.toString(true, true, true)
+        ) {
+          document.getElementById("is_owner").innerText = "You are owner";
+          document.getElementById("is_owner").classList.add("success");
+          document.getElementById("transfer-panel").classList.add('ready');
+        } else {
+          document.getElementById("is_owner").innerText = "You are not owner";
+          document.getElementById("is_owner").classList.add("alert");
+          document.getElementById("transfer-panel").classList.remove('ready');
+        }
+        document.getElementById("nft-item").classList.add("ready");
+      });
+
+      document.getElementById("send").addEventListener("click", async () => {
+        let address = new Address(
+          document.getElementById("toAddressInput").value
+        );
+        let payload = global_nft.methods.create_transfer_payload({
+          to: address,
+          amount: 0,
+        });
+
+        window.ton.send("ton_sendTransaction", [
+          {
+            to: global_nft.address.toString(true, true, true),
+            value: TonWeb.utils.toNano(0.01).toString(),
+            data: TonWeb.utils.bytesToBase64(await payload.toBoc()),
+            dataType: "boc",
+          },
+        ]);
+      });
+      if (myParam) {
+        document.getElementById("nft_address").value = myParam;
+        document.getElementById("check").click();
+      }
+    </script>
+  </body>
+</html>

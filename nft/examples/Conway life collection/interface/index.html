@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+    <script
+      type="text/javascript"
+      src="./tonweb-0.0.27.js"
+    ></script>
+    <script type="text/javascript" src="nft.js"></script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="tabs">
+        <a class="active" href="index.html">Collection</a>
+        <a href="nft.html">Individual NFT</a>
+      </header>
+      <div>
+        <h1>Collection exemplars</h1>
+      </div>
+
+      <div id="collection" class="collection"></div>
+    </div>
+
+    <script>
+      //<img src="t2.png" style="image-rendering: pixelated;"></img>
+
+      const mainnet = "https://tonchain.co/api/v2/jsonRPC";
+      const prv = new TonWeb.HttpProvider(mainnet);
+      let collection = new NFTCollection(prv, {
+        address: "kQBbB9BgeMuGpdIjlD2Wl1mexU4zUPx-lhnT0KKndSugroDO",
+      });
+      const renderCollectionItem = async (i) => {
+        let nft_address = await collection.methods.get_std_nft_address_by_index(i).call();
+        const nft = new NFT(prv, { address: nft_address });
+
+        await nft.loadData();
+
+        const name = await nft.methods.get_name().call();
+
+        console.log(nft);
+
+        const collectionItemElement = document
+          .getElementById("collection")
+          .querySelector(`[data-key="${i}"]`);
+
+        collectionItemElement.innerHTML = `
+          <div class="collection-item">
+            <a href="nft.html?token=${nft_address}">
+              <header>
+                <span class="label">Collection element ${i}</span>
+                <h2>${name}</h2>
+              </header>
+              <img style="image-rendering: pixelated; width:100px;" src="data:image/png;base64,${
+                parse_nft_content(nft.content)["png/base64"]
+              }"/>
+            </a>
+          <div>
+        `;
+      };
+      const showCollection = async () => {
+        const num = await collection.methods.tokens_num().call();
+
+        // prerender skeleton
+        for (let i = 0; i < num; i++) {
+          const collectionElement = document.getElementById("collection");
+          collectionElement.innerHTML =
+            collectionElement.innerHTML + `<div class="collection-item" data-key="${i}"><a /><div>`;
+        }
+
+        let promisses = [];
+        for (let i = 0; i < num; i++) {
+          promisses.push(renderCollectionItem(i));
+          if (promisses.length > 8) {
+            await Promise.all(promisses);
+            promisses = [];
+          }
+        }
+      };
+      showCollection();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,235 @@
+* {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+.label {
+  font-size: 0.6em;
+  display: block;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 2px;
+}
+
+code {
+  font-family: monospace;
+  letter-spacing: 1px;
+  background: #f4f4f4;
+  padding: 9px;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  font-size: 34px;
+  line-height: 1;
+  text-align: center;
+}
+
+h2 {
+  font-size: 26px;
+  margin: 0;
+  padding-bottom: 10px;
+  padding-top: 5px;
+}
+
+.wrapper {
+  max-width: 480px;
+  margin: 0 auto 20px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tabs {
+  padding-top: 20px;
+}
+.tabs a {
+  color: #999;
+  text-decoration: none;
+  font-size: 17px;
+  background: #fff;
+  padding: 10px;
+}
+
+.tabs a:hover {
+  color: #555;
+}
+
+.tabs a.active {
+  background: #eaeaeb73;
+  color: #000;
+  cursor: none;
+}
+
+.collection {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.collection-item {
+  width: 100%;
+}
+
+.collection-item a {
+  display: flex;
+  color: #000;
+  padding: 16px;
+  margin: 5px 0;
+  background-color: #eaeaeb73;
+  border-radius: 10px;
+  text-decoration: none;
+  justify-content: space-between;
+  transition: all 150ms ease-in-out;
+  min-height: 132px;
+  box-sizing: border-box;
+  animation: appear 350ms;
+  will-change: opacity;
+  overflow: hidden;
+}
+.collection-item img {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.collection-item a:hover {
+  background-color: #c7c7cc73;
+  transform: scale(1.02);
+}
+
+.panel {
+  width: 100%;
+  background: #e5e5e5;
+  padding: 10px 14px 26px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.nft-form-field {
+  margin-top: 6px;
+  display: flex;
+}
+
+.example-block {
+  color: #000;
+  padding: 10px 14px;
+  margin: 17px -14px -26px -14px;
+  background-color: #f2f2f2;
+  text-decoration: none;
+  justify-content: space-between;
+  transition: all 150ms ease-in-out;
+  box-sizing: border-box;
+  will-change: opacity;
+  overflow: hidden;
+}
+
+.text-field {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 5px;
+  background-color: #fff;
+  margin-right: 4px;
+  outline: none;
+  width: 100%;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+.text-field:focus {
+  background-color: #c7c7cc73;
+}
+
+.button-field {
+  border: none;
+  border-radius: 5px;
+  padding: 10px 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  width: 174px;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#transfer-panel {
+    opacity: 0;
+    transition: opacity 250ms ease-in;
+}
+
+#transfer-panel.ready {
+    opacity: 1;
+}
+#content {
+  width: 134px;
+}
+
+#content img {
+  border: 1px solid #ccc;
+  margin: 10px 0;
+  border-radius: 10px;
+  display: block;
+  float: right;
+}
+
+.nft-item {
+  display: flex;
+  opacity: 0;
+  transition: opacity 250ms ease-in;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.nft-item.ready {
+  opacity: 1;
+}
+
+.nft-fields {
+  width: 100%;
+}
+
+.nft-fields .field {
+  display: block;
+  padding: 10px 14px;
+  margin: 10px 14px 10px 0;
+  background: #f6f6f6;
+  box-sizing: border-box;
+  min-height: 50px;
+}
+
+.value {
+  font-family: monospace;
+  letter-spacing: 1px;
+  overflow-wrap: anywhere;
+  margin-top: 4px;
+}
+
+.success {
+  color: green;
+  font-weight: bold;
+  float: right;
+}
+
+.alert {
+  color: red;
+  font-weight: bold;
+  float: right;
+}
