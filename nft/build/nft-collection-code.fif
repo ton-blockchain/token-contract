@@ -5,17 +5,15 @@ PROGRAM{
   DECLPROC save_data
   DECLPROC calculate_nft_state_init
   DECLPROC calculate_nft_address
-  DECLPROC after_code_upgrade
+  1666 DECLMETHOD after_code_upgrade
   DECLPROC recv_internal
   DECLPROC recv_external
   85143 DECLMETHOD seqno
   81467 DECLMETHOD get_subwallet_id
   78748 DECLMETHOD get_public_key
-  83856 DECLMETHOD get_next_index
+  102491 DECLMETHOD get_collection_data
   92067 DECLMETHOD get_nft_address_by_index
-  84773 DECLMETHOD get_std_nft_address_by_index
   80895 DECLMETHOD member_content
-  65637 DECLMETHOD member_uri
   load_data PROC:<{
     // 
     c4 PUSH	//  _1
@@ -23,24 +21,27 @@ PROGRAM{
     32 LDU	//  _3 ds
     32 LDU	//  _3 _6 ds
     256 LDU	//  _3 _6 _9 ds
-    64 LDU	//  _3 _6 _9 _12 ds
-    LDREF	//  _3 _6 _9 _12 _15 ds
-    LDREF	//  _3 _6 _9 _12 _15 _30 _29
-    DROP	//  _3 _6 _9 _12 _15 _17
+    LDMSGADDR	//  _3 _6 _9 _12 ds
+    64 LDU	//  _3 _6 _9 _12 _14 ds
+    LDREF	//  _3 _6 _9 _12 _14 _17 ds
+    LDREF	//  _3 _6 _9 _12 _14 _17 _34 _33
+    DROP	//  _3 _6 _9 _12 _14 _17 _19
   }>
   save_data PROC:<{
-    //  seqno collection_id public_key next_index content code
-    s0 s5 XCHG
-    NEWC	//  code collection_id public_key next_index content seqno _6
-    32 STU	//  code collection_id public_key next_index content _8
-    s1 s4 XCHG	//  code content public_key next_index collection_id _8
-    32 STU	//  code content public_key next_index _10
-    s1 s2 XCHG	//  code content next_index public_key _10
-    256 STU	//  code content next_index _12
-    64 STU	//  code content _14
-    STREF	//  code _15
-    STREF	//  _16
-    ENDC	//  _17
+    //  seqno collection_id public_key editor next_index content code
+    s0 s6 XCHG
+    NEWC	//  code collection_id public_key editor next_index content seqno _7
+    32 STU	//  code collection_id public_key editor next_index content _9
+    s1 s5 XCHG	//  code content public_key editor next_index collection_id _9
+    32 STU	//  code content public_key editor next_index _11
+    s1 s3 XCHG	//  code content next_index editor public_key _11
+    256 STU	//  code content next_index editor _13
+    SWAP	//  code content next_index _13 editor
+    STSLICER	//  code content next_index _14
+    64 STU	//  code content _16
+    STREF	//  code _17
+    STREF	//  _18
+    ENDC	//  _19
     c4 POP
   }>
   calculate_nft_state_init PROC:<{
@@ -79,7 +80,72 @@ PROGRAM{
   }>
   recv_internal PROC:<{
     //  msg_value in_msg_cell in_msg
-    3 BLKDROP	// 
+    s2 POP	//  in_msg in_msg_cell
+    OVER	//  in_msg in_msg_cell in_msg
+    SEMPTY	//  in_msg in_msg_cell _3
+    IFJMP:<{	//  in_msg in_msg_cell
+      2DROP	// 
+    }>	//  in_msg in_msg_cell
+    CTOS	//  in_msg cs
+    4 LDU	//  in_msg flags cs
+    SWAP
+    1 PUSHINT	//  in_msg cs flags _10=1
+    AND	//  in_msg cs _11
+    IFJMP:<{	//  in_msg cs
+      2DROP	// 
+    }>	//  in_msg cs
+    load_data INLINECALLDICT	//  in_msg cs stored_seqno stored_collection_id public_key editor next_index common_content code
+    s0 s7 XCHG	//  in_msg code stored_seqno stored_collection_id public_key editor next_index common_content cs
+    LDMSGADDR	//  in_msg code stored_seqno stored_collection_id public_key editor next_index common_content _87 _86
+    DROP	//  in_msg code stored_seqno stored_collection_id public_key editor next_index common_content sender_address
+    s0 s3 XCHG2	//  in_msg code stored_seqno stored_collection_id public_key common_content next_index sender_address editor
+    SDEQ	//  in_msg code stored_seqno stored_collection_id public_key common_content next_index _26
+    401 THROWIFNOT
+    s0 s6 XCHG	//  next_index code stored_seqno stored_collection_id public_key common_content in_msg
+    32 LDU	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+    OVER	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg op
+    0 EQINT	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg _33
+    IF:<{	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+      LDREF	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg
+      OVER	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg new_code
+      SETCODE
+      DUP	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg in_msg
+      SREFS	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg _38
+      0 GTINT	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg _40
+      IF:<{	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg
+        LDREF	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code _42 in_msg
+        SWAP	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg _42
+        CTOS	//  next_index code stored_seqno stored_collection_id public_key common_content op new_code in_msg post_process
+        s0 s2 XCHG	//  next_index code stored_seqno stored_collection_id public_key common_content op post_process in_msg new_code
+        CTOS	//  next_index code stored_seqno stored_collection_id public_key common_content op post_process in_msg _45
+        BLESS	//  next_index code stored_seqno stored_collection_id public_key common_content op post_process in_msg _46
+        c3 POP
+        SWAP	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg post_process
+        after_code_upgrade CALLDICT
+        0 THROW
+      }>ELSE<{
+        NIP	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+      }>
+    }>	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+    OVER	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg op
+    1 EQINT	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg _52
+    IF:<{	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+      LDREF	//  next_index code stored_seqno stored_collection_id public_key common_content op new_storage in_msg
+      SWAP	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg new_storage
+      c4 POP
+    }>	//  next_index code stored_seqno stored_collection_id public_key common_content op in_msg
+    SWAP	//  next_index code stored_seqno stored_collection_id public_key common_content in_msg op
+    2 EQINT	//  next_index code stored_seqno stored_collection_id public_key common_content in_msg _58
+    IF:<{	//  next_index code stored_seqno stored_collection_id public_key common_content in_msg
+      LDMSGADDR	//  next_index code stored_seqno stored_collection_id public_key common_content _97 _96
+      DROP	//  next_index code stored_seqno stored_collection_id public_key common_content new_editor
+      s4 s6 XCHG
+      s3 s5 XCHG
+      s4 s1 s3 XCHG3	//  stored_seqno stored_collection_id public_key new_editor next_index common_content code
+      save_data INLINECALLDICT
+    }>ELSE<{
+      7 BLKDROP	// 
+    }>
   }>
   recv_external PROC:<{
     //  in_msg
@@ -93,115 +159,82 @@ PROGRAM{
     NOW	//  signature in_msg collection_id cs msg_seqno valid_until _19
     LEQ	//  signature in_msg collection_id cs msg_seqno _20
     36 THROWIF
-    load_data INLINECALLDICT	//  signature in_msg collection_id cs msg_seqno stored_seqno stored_collection_id public_key next_index common_content code
-    s6 s5 XCPU	//  signature in_msg collection_id cs code stored_seqno stored_collection_id public_key next_index common_content msg_seqno stored_seqno
-    EQUAL	//  signature in_msg collection_id cs code stored_seqno stored_collection_id public_key next_index common_content _30
+    load_data INLINECALLDICT	//  signature in_msg collection_id cs msg_seqno stored_seqno stored_collection_id public_key editor next_index common_content code
+    s7 s6 XCPU	//  signature in_msg collection_id cs code stored_seqno stored_collection_id public_key editor next_index common_content msg_seqno stored_seqno
+    EQUAL	//  signature in_msg collection_id cs code stored_seqno stored_collection_id public_key editor next_index common_content _31
     33 THROWIFNOT
-    s7 s3 XCPU	//  signature in_msg common_content cs code stored_seqno stored_collection_id public_key next_index collection_id stored_collection_id
-    EQUAL	//  signature in_msg common_content cs code stored_seqno stored_collection_id public_key next_index _33
+    s8 s4 XCPU	//  signature in_msg common_content cs code stored_seqno stored_collection_id public_key editor next_index collection_id stored_collection_id
+    EQUAL	//  signature in_msg common_content cs code stored_seqno stored_collection_id public_key editor next_index _34
     34 THROWIFNOT
-    s0 s7 XCHG	//  signature next_index common_content cs code stored_seqno stored_collection_id public_key in_msg
-    HASHSU	//  signature next_index common_content cs code stored_seqno stored_collection_id public_key _36
-    s0 s8 s8 XC2PU	//  public_key next_index common_content cs code stored_seqno stored_collection_id _36 signature public_key
-    CHKSIGNU	//  public_key next_index common_content cs code stored_seqno stored_collection_id _37
+    s0 s8 XCHG	//  signature next_index common_content cs code stored_seqno stored_collection_id public_key editor in_msg
+    HASHSU	//  signature next_index common_content cs code stored_seqno stored_collection_id public_key editor _37
+    s0 s9 s2 XC2PU	//  editor next_index common_content cs code stored_seqno stored_collection_id public_key _37 signature public_key
+    CHKSIGNU	//  editor next_index common_content cs code stored_seqno stored_collection_id public_key _38
     35 THROWIFNOT
     ACCEPT
-    SWAP	//  public_key next_index common_content cs code stored_collection_id stored_seqno
-    INC	//  public_key next_index common_content cs code stored_collection_id stored_seqno
-    s0 s1 s6 PUSH3
-    s8 s7 s5 PUSH3	//  public_key next_index common_content cs code stored_collection_id stored_seqno stored_seqno stored_collection_id public_key next_index common_content code
+    s0 s2 XCHG	//  editor next_index common_content cs code public_key stored_collection_id stored_seqno
+    INC	//  editor next_index common_content cs code public_key stored_collection_id stored_seqno
+    s0 s1 s2 PUSH3
+    s10 s9 s8 PUSH3
+    s9 PUSH	//  editor next_index common_content cs code public_key stored_collection_id stored_seqno stored_seqno stored_collection_id public_key editor next_index common_content code
     save_data INLINECALLDICT
     COMMIT
-    s0 s3 XCHG	//  public_key next_index common_content stored_seqno code stored_collection_id cs
-    8 LDU	//  public_key next_index common_content stored_seqno code stored_collection_id op cs
-    1000000000 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id op cs _50=1000000000
-    2 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id op cs _50=1000000000 _51=2
+    s0 s4 XCHG	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs
+    8 LDU	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs
+    1000000000 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs _51=1000000000
+    2 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs _51=1000000000 _52=2
     RAWRESERVE
-    OVER	//  public_key next_index common_content stored_seqno code stored_collection_id op cs op
-    0 EQINT	//  public_key next_index common_content stored_seqno code stored_collection_id op cs _54
-    IFJMP:<{	//  public_key next_index common_content stored_seqno code stored_collection_id op cs
-      7 1 BLKDROP2	//  cs
+    OVER	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs op
+    0 EQINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs _55
+    IFJMP:<{	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs
+      8 1 BLKDROP2	//  cs
       WHILE:<{
         DUP	//  cs cs
-        SREFS	//  cs _55
+        SREFS	//  cs _56
       }>DO<{	//  cs
         8 LDU	//  mode cs
-        LDREF	//  mode _60 cs
+        LDREF	//  mode _61 cs
         s0 s2 XCHG
-        2 PUSHINT	//  cs _60 mode _62=2
-        AND	//  cs _60 _63
+        2 PUSHINT	//  cs _61 mode _63=2
+        AND	//  cs _61 _64
         SENDRAWMSG
       }>	//  cs
       DROP	// 
-    }>	//  public_key next_index common_content stored_seqno code stored_collection_id op cs
-    OVER	//  public_key next_index common_content stored_seqno code stored_collection_id op cs op
-    1 EQINT	//  public_key next_index common_content stored_seqno code stored_collection_id op cs _66
-    IFJMP:<{	//  public_key next_index common_content stored_seqno code stored_collection_id op cs
-      NIP	//  public_key next_index common_content stored_seqno code stored_collection_id cs
-      s5 s2 PUSH2	//  public_key next_index common_content stored_seqno code stored_collection_id cs next_index code
-      calculate_nft_state_init CALLDICT	//  public_key next_index common_content stored_seqno code stored_collection_id cs state_init
-      0 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id cs state_init _70=0
-      OVER	//  public_key next_index common_content stored_seqno code stored_collection_id cs state_init _70=0 state_init
-      calculate_nft_address CALLDICT	//  public_key next_index common_content stored_seqno code stored_collection_id cs state_init nft_address
-      s0 s2 XCHG	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init cs
-      LDREF	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init _73 cs
-      7 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init _73 cs _79
-      24 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init _73 cs _79 _80=24
-      NEWC	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init _73 cs _79 _80=24 _81
-      6 STU	//  public_key next_index common_content stored_seqno code stored_collection_id nft_address state_init _73 cs _79 _83
-      s0 s5 XCHG2	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 cs _83 nft_address
-      STSLICER	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 cs _84
-      SWAP	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 _84 cs
-      LDGRAMS	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 _84 _160 _159
-      DROP	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 _84 _85
-      STGRAMS	//  public_key next_index common_content stored_seqno code stored_collection_id _79 state_init _73 _87
-      s1 s3 XCHG	//  public_key next_index common_content stored_seqno code stored_collection_id _73 state_init _79 _87
-      108 STU	//  public_key next_index common_content stored_seqno code stored_collection_id _73 state_init _103
-      STREF	//  public_key next_index common_content stored_seqno code stored_collection_id _73 _104
-      STREF	//  public_key next_index common_content stored_seqno code stored_collection_id msg
-      ENDC	//  public_key next_index common_content stored_seqno code stored_collection_id _106
-      3 PUSHINT	//  public_key next_index common_content stored_seqno code stored_collection_id _106 _107=3
+    }>	//  editor next_index common_content stored_seqno code public_key stored_collection_id op cs
+    SWAP	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs op
+    1 EQINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs _67
+    IFJMP:<{	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs
+      s6 s3 PUSH2	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs next_index code
+      calculate_nft_state_init CALLDICT	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs state_init
+      0 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs state_init _71=0
+      OVER	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs state_init _71=0 state_init
+      calculate_nft_address CALLDICT	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs state_init nft_address
+      s0 s2 XCHG	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init cs
+      LDREF	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init _74 cs
+      7 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init _74 cs _80
+      24 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init _74 cs _80 _81=24
+      NEWC	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init _74 cs _80 _81=24 _82
+      6 STU	//  editor next_index common_content stored_seqno code public_key stored_collection_id nft_address state_init _74 cs _80 _84
+      s0 s5 XCHG2	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 cs _84 nft_address
+      STSLICER	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 cs _85
+      SWAP	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 _85 cs
+      LDGRAMS	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 _85 _137 _136
+      DROP	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 _85 _86
+      STGRAMS	//  editor next_index common_content stored_seqno code public_key stored_collection_id _80 state_init _74 _88
+      s1 s3 XCHG	//  editor next_index common_content stored_seqno code public_key stored_collection_id _74 state_init _80 _88
+      108 STU	//  editor next_index common_content stored_seqno code public_key stored_collection_id _74 state_init _104
+      STREF	//  editor next_index common_content stored_seqno code public_key stored_collection_id _74 _105
+      STREF	//  editor next_index common_content stored_seqno code public_key stored_collection_id msg
+      ENDC	//  editor next_index common_content stored_seqno code public_key stored_collection_id _107
+      3 PUSHINT	//  editor next_index common_content stored_seqno code public_key stored_collection_id _107 _108=3
       SENDRAWMSG
-      s0 s4 XCHG	//  public_key stored_collection_id common_content stored_seqno code next_index
-      INC	//  public_key stored_collection_id common_content stored_seqno code next_index
-      s0 s1 s5 XCHG3
-      s3 s3 XCHG2	//  stored_seqno stored_collection_id public_key next_index common_content code
+      s0 s5 XCHG	//  editor stored_collection_id common_content stored_seqno code public_key next_index
+      INC	//  editor stored_collection_id common_content stored_seqno code public_key next_index
+      s3 s6 XCHG
+      s4 s2 XCHG2	//  stored_seqno stored_collection_id public_key editor next_index common_content code
       save_data INLINECALLDICT
-    }>	//  public_key next_index common_content stored_seqno code stored_collection_id op cs
-    6 2 BLKDROP2	//  op cs
-    OVER	//  op cs op
-    2 EQINT	//  op cs _113
-    IF:<{	//  op cs
-      LDREF	//  op new_code cs
-      OVER	//  op new_code cs new_code
-      SETCODE
-      DUP	//  op new_code cs cs
-      SREFS	//  op new_code cs _118
-      0 GTINT	//  op new_code cs _120
-      IF:<{	//  op new_code cs
-        LDREF	//  op new_code _122 cs
-        SWAP	//  op new_code cs _122
-        CTOS	//  op new_code cs post_process
-        s0 s2 XCHG	//  op post_process cs new_code
-        CTOS	//  op post_process cs _125
-        BLESS	//  op post_process cs _126
-        c3 POP
-        SWAP	//  op cs post_process
-        after_code_upgrade CALLDICT
-        0 THROW
-      }>ELSE<{
-        NIP	//  op cs
-      }>
-    }>	//  op cs
-    SWAP	//  cs op
-    3 EQINT	//  cs _132
-    IF:<{	//  cs
-      LDREF	//  _166 _165
-      DROP	//  new_storage
-      c4 POP
-    }>ELSE<{
-      DROP	// 
-    }>
+    }>	//  editor next_index common_content stored_seqno code public_key stored_collection_id cs
+    8 BLKDROP	// 
   }>
   seqno PROC:<{
     // 
@@ -225,35 +258,28 @@ PROGRAM{
     SDSKIPFIRST	//  cs
     256 PLDU	//  _6
   }>
-  get_next_index PROC:<{
+  get_collection_data PROC:<{
     // 
     c4 PUSH	//  _1
     CTOS	//  _2
-    320 PUSHINT	//  _2 _5
+    320 PUSHINT	//  _2 _7
     SDSKIPFIRST	//  cs
-    64 PLDU	//  _8
+    LDMSGADDR	//  _11 cs
+    64 LDU	//  _11 _19 _18
+    DROP	//  editor index
+    SWAP	//  index editor
   }>
   get_nft_address_by_index PROC:<{
     //  index
-    load_data INLINECALLDICT	//  index _12 _13 _14 _15 _16 _17
-    5 1 BLKDROP2	//  index code
+    load_data INLINECALLDICT	//  index _13 _14 _15 _16 _17 _18 _19
+    6 1 BLKDROP2	//  index code
     calculate_nft_state_init CALLDICT	//  state_init
-    0 PUSHINT	//  state_init _10=0
-    SWAP	//  _10=0 state_init
-    calculate_nft_address CALLDICT	//  _11
-  }>
-  get_std_nft_address_by_index PROC:<{
-    //  index
-    get_nft_address_by_index CALLDICT	//  _1
-    REWRITESTDADDR	//  _3 _4
+    0 PUSHINT	//  state_init _11=0
+    SWAP	//  _11=0 state_init
+    calculate_nft_address CALLDICT	//  _12
   }>
   member_content PROC:<{
     //  index individual_content
     NIP	//  individual_content
-  }>
-  member_uri PROC:<{
-    //  index individual_content
-    NIP	//  individual_content
-    CTOS	//  _2
   }>
 }END>c

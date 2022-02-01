@@ -4,26 +4,31 @@ int notification::ownership_transferred() asm "0x10 PUSHINT";
 int deployment_op() asm "0xFF11 PUSHINT";
 int equal_slices (slice s1, slice s2) asm "SDEQ";
 
-;; storage scheme 
+;; storage scheme
 ;; storage#_ seqno:uint32 collection_id:uint32 public_key:bits256
+;;           editor:MsgAddress
 ;;           next_index:uint64 common_content:^Cell nft_code:^Cell = Storage;
 
-(int, int, int, int, cell, cell) load_data() inline {
+(int, int, int, slice, int, cell, cell) load_data() inline {
   var ds = get_data().begin_parse();
-  return  
-    (ds~load_uint(32), 
-     ds~load_uint(32), 
-     ds~load_uint(256), 
+  return 
+    (ds~load_uint(32),
+     ds~load_uint(32),
+     ds~load_uint(256),
+     ds~load_msg_addr(),
      ds~load_uint(64),
      ds~load_ref(),
      ds~load_ref());
 }
 
-() save_data(int seqno, int collection_id, int public_key, int next_index, cell content, cell code) impure inline {
+() save_data(int seqno, int collection_id, int public_key,
+             slice editor,
+             int next_index, cell content, cell code) impure inline {
   set_data(begin_cell()
     .store_uint(seqno, 32)
     .store_uint(collection_id, 32)
     .store_uint(public_key, 256)
+    .store_slice(editor)
     .store_uint(next_index, 64)
     .store_ref(content)
     .store_ref(code)
@@ -44,10 +49,45 @@ slice calculate_nft_address (int workchain, cell init_data) {
 }
 
 
-() after_code_upgrade(slice data) impure {
-} 
+() after_code_upgrade(slice data) impure method_id(1666) {
+}
 
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    if (in_msg.slice_empty?()) {
+        ;; ignore empty messages
+        return ();
+    }
+    slice cs = in_msg_cell.begin_parse();
+    int flags = cs~load_uint(4);
+
+    ;; ignore all bounced messages
+    if (flags & 1) {
+        return ();
+    }
+
+    var data = load_data();
+    var (stored_seqno, stored_collection_id, public_key, editor, next_index, common_content, code) = load_data();
+    slice sender_address = cs~load_msg_addr();
+    throw_unless(401, equal_slices(sender_address, editor));
+    int op = in_msg~load_uint(32);
+    if (op == 0) { ;; update nft_code
+      cell new_code = in_msg~load_ref();
+      set_code(new_code);
+      if(in_msg.slice_refs() > 0) {
+        slice post_process = in_msg~load_ref().begin_parse();
+        set_c3(new_code.begin_parse().bless());
+        after_code_upgrade(post_process);
+        throw(0);
+      }
+    }
+    if (op == 1) { ;; update nft_storage
+      cell new_storage = in_msg~load_ref();
+      set_data(new_storage);
+    }
+    if (op == 2) { ;; update editor
+      slice new_editor = in_msg~load_msg_addr();
+      save_data(stored_seqno, stored_collection_id, public_key, new_editor, next_index, common_content, code);
+    }
 }
 
 () recv_external(slice in_msg) impure {
@@ -55,13 +95,13 @@ slice calculate_nft_address (int workchain, cell init_data) {
   var cs = in_msg;
   var (collection_id, valid_until, msg_seqno) = (cs~load_uint(32), cs~load_uint(32), cs~load_uint(32));
   throw_if(36, valid_until <= now());
-  var (stored_seqno, stored_collection_id, public_key, next_index, common_content, code) = load_data();
+  var (stored_seqno, stored_collection_id, public_key, editor, next_index, common_content, code) = load_data();
   throw_unless(33, msg_seqno == stored_seqno);
   throw_unless(34, collection_id == stored_collection_id);
   throw_unless(35, check_signature(slice_hash(in_msg), signature, public_key));
   accept_message();
   stored_seqno += 1;
-  save_data(stored_seqno, stored_collection_id, public_key, next_index, common_content, code);
+  save_data(stored_seqno, stored_collection_id, public_key, editor, next_index, common_content, code);
   commit();
   cs~touch();
   int op = cs~load_uint(8);
@@ -69,7 +109,7 @@ slice calculate_nft_address (int workchain, cell init_data) {
   if (op == 0) { ;; simple send
     while (cs.slice_refs()) {
       var mode = cs~load_uint(8);
-      ;; Do not allow to send message without 2 flag to eliminate possibility of 
+      ;; Do not allow to send message without 2 flag to eliminate possibility of
       ;; contract drain
       send_raw_message(cs~load_ref(), mode & 2);
     }
@@ -88,22 +128,8 @@ slice calculate_nft_address (int workchain, cell init_data) {
       .store_ref(cs~load_ref());
     send_raw_message(msg.end_cell(), 3);
     next_index += 1;
-    save_data(stored_seqno, stored_collection_id, public_key, next_index, common_content, code);
+    save_data(stored_seqno, stored_collection_id, public_key, editor, next_index, common_content, code);
     return();
-  }
-  if (op == 2) { ;; update nft_code
-    cell new_code = cs~load_ref();
-    set_code(new_code);
-    if(cs.slice_refs() > 0) {
-      slice post_process = cs~load_ref().begin_parse();
-      set_c3(new_code.begin_parse().bless());
-      after_code_upgrade(post_process);
-      throw(0);
-    }
-  }
-  if (op == 3) { ;; update nft_storage
-    cell new_storage = cs~load_ref();
-    set_data(new_storage);
   }
 }
 
@@ -122,19 +148,18 @@ int get_public_key() method_id {
   return cs.preload_uint(256);
 }
 
-int get_next_index() method_id {
-  var cs = get_data().begin_parse().skip_bits(64 + 256);
-  return cs.preload_uint(64);
+
+;; NFT standart
+(int, slice) get_collection_data() method_id {
+  var cs = get_data().begin_parse().skip_bits(32 + 32 + 256);
+  var (editor, index) = (cs~load_msg_addr(), cs~load_uint(64));
+  return (index, editor);
 }
 
 slice get_nft_address_by_index(index) method_id {
-    (_, _, _, _, _, cell code) = load_data();
+    (_, _, _, _, _, _, cell code) = load_data();
     cell state_init = calculate_nft_state_init(index, code);
     return calculate_nft_address(0, state_init);
-}
-
-(int, int) get_std_nft_address_by_index(int index) method_id {
-    return parse_std_addr(get_nft_address_by_index(index));
 }
 
 cell member_content(int index, cell individual_content) method_id {
@@ -142,11 +167,7 @@ cell member_content(int index, cell individual_content) method_id {
     return individual_content;
 }
 
-slice member_uri(int index, cell individual_content) method_id {
-    return individual_content.begin_parse();
-}
-
-
+;; NFT Royalty standart
 {- Optional method
   ((int,int), slice) royalty_params() method_id {
       return ((0,100), my_address());
