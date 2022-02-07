@@ -104,7 +104,7 @@ int equal_slices (slice a, slice b) asm "SDEQ";
     }
 
     if (op == 3) { ;; cancel sale
-         throw_unless(450, msg_value >= min_gas_amount());
+         throw_unless(457, msg_value >= min_gas_amount());
 
          var msg = begin_cell()
            .store_uint(0x10, 6) ;; nobounce
