@@ -206,3 +206,6 @@ int get_seed() impure asm "RANDSEED";
 int set_seed() impure asm "SETRAND";
 () randomize(int x) impure asm "ADDRAND";
 () randomize_lt() impure asm "LTIME" "ADDRAND";
+
+builder store_coins(builder b, int x) asm "STVARUINT16";
+(slice, int) load_coins(slice s) asm( -> 1 0) "LDVARUINT16";

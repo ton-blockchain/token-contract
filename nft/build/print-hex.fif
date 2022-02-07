@@ -1,0 +1,28 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+."nft-collection:" cr
+
+"nft-collection-code.fif" include
+2 boc+>B dup Bx. cr
+
+."nft:" cr
+
+"nft-item-code.fif" include
+2 boc+>B dup Bx. cr
+
+
+
+."nft-marketplace:" cr
+
+"nft-marketplace-code.fif" include
+2 boc+>B dup Bx. cr
+
+
+
+
+."nft-sale:" cr
+
+"nft-sale-code.fif" include
+2 boc+>B dup Bx. cr
