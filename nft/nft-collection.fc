@@ -55,6 +55,18 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
   send_raw_message(msg.end_cell(), 1); ;; paying fees, revert on errors
 }
 
+() send_royalty_params(slice to_address, int op, int query_id, slice data) impure inline {
+  var msg = begin_cell()
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_slice(to_address)
+    .store_coins(0)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op | 0x80000000, 32)
+    .store_uint(query_id, 64)
+    .store_slice(data);
+  return send_raw_message(msg.end_cell(), 64);
+}
+
 () recv_internal(cell in_msg_full, slice in_msg_body) impure {
     if (in_msg_body.slice_empty?()) { ;; ignore empty messages       
         return ();
@@ -69,9 +81,17 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
 
     var (owner_address, next_item_index, collection_content, nft_item_code, royalty_params) = load_data();
   
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    if (op == 0x16) {
+        send_royalty_params(sender_address, op, query_id, royalty_params.begin_parse());
+
+        return ();
+    }
+
     throw_unless(401, equal_slices(sender_address, owner_address));
     
-    int op = in_msg_body~load_uint(32);
   
     if (op == 1) { ;; deploy new nft
       int item_index = in_msg_body~load_uint(64);

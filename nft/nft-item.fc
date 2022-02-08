@@ -40,7 +40,7 @@ builder store_builder(builder to, builder from) asm "STBR";
     );
 }
 
-() send_static_response(slice to_address, int op, int query_id, builder static_data) impure inline {
+() send_static_data(slice to_address, int op, int query_id, builder static_data) impure inline {
   var msg = begin_cell()
     .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     .store_slice(to_address)
@@ -128,7 +128,7 @@ builder store_builder(builder to, builder from) asm "STBR";
       return transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body);
     }
     if (op == 0x17) {
-      return send_static_response(sender_address, 0x17, query_id,
+      return send_static_data(sender_address, 0x17, query_id,
          begin_cell().store_uint(index, 64).store_slice(collection_address)
          );
     }
