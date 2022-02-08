@@ -1,0 +1,8 @@
+{
+  "name": "Marketplace Creatures",
+  "description": "Marketplace Creatures are adorable aquatic beings primarily for demonstrating what can be done using the Marketplace platform. Adopt one today to try out all the Marketplace buying, selling, and bidding feature set.",
+  "image": "https://matketplacecreatures.io/image.png",
+  "external_link": "https://matketplacecreatures.io",
+  "seller_fee_basis_points": 100,
+  "fee_recipient": "0xA97F337c39cccE66adfeCB2BF99C1DdC54C2D721"
+}
