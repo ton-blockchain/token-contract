@@ -8,6 +8,7 @@ int slice_null?(slice s) asm "ISNULL";
 int transfer_notify() asm "0x11 PUSHINT";
 int tranfer_response() asm "0x80000012 PUSHINT";
 int min_gas_for_storage() asm "50000000 PUSHINT";
+builder store_builder(builder to, builder from) asm "STBR";
 
 ;;
 ;;  Storage
@@ -39,6 +40,18 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
     );
 }
 
+() send_static_response(slice to_address, int op, int query_id, builder static_data) impure inline {
+  var msg = begin_cell()
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_slice(to_address)
+    .store_coins(0)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op | 0x80000000, 32)
+    .store_uint(query_id, 64)
+    .store_builder(static_data);
+  return send_raw_message(msg.end_cell(), 64);
+}
+
 () send_msg(slice to_address, int amount, int op, int query_id, slice payload1, slice payload2) impure inline {
   if (to_address.preload_uint(2) == 0) { ;; addr_none: 00
     return ();
@@ -66,17 +79,22 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
 () transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body) impure {
     slice new_owner_address = in_msg_body~load_msg_addr();
     throw_unless(401, equal_slices(sender_address, owner_address));
-  
+
+    slice response_destination = in_msg_body~load_msg_addr();
+    in_msg_body~load_int(1); ;; Base nft ignores InPayload
     int forward_amount = in_msg_body~load_coins();
     int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
     throw_unless(402, rest_amount > 0);
-
-    slice response_address = in_msg_body~load_msg_addr();
- 
-    if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, transfer_notify(), query_id, owner_address, in_msg_body);
+    ;; base nft spends fixed amount of gas, will not check for response
+    var forward_payload = in_msg_body;
+    if (forward_payload~load_int(1)) {
+      forward_payload = forward_payload.preload_ref().begin_parse();
     }
-    send_msg(response_address, rest_amount, tranfer_response(), query_id, null(), null());
+
+    if (forward_amount) {
+      send_msg(new_owner_address, forward_amount, transfer_notify(), query_id, owner_address, forward_payload);
+    }
+    send_msg(response_destination, rest_amount, tranfer_response(), query_id, null(), null());
 
     store_data(index, collection_address, new_owner_address, content);
 }
@@ -108,6 +126,11 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
 
     if (op == 1) {
       return transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body);
+    }
+    if (op == 0x17) {
+      return send_static_response(sender_address, 0x17, query_id,
+         begin_cell().store_uint(index, 64).store_slice(collection_address)
+         );
     }
 }
 
