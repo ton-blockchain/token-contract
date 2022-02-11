@@ -4,11 +4,9 @@
 
 int equal_slices (slice a, slice b) asm "SDEQ";
 int slice_null?(slice s) asm "ISNULL";
-
-int transfer_notify() asm "0x11 PUSHINT";
-int tranfer_response() asm "0x80000012 PUSHINT";
-int min_gas_for_storage() asm "50000000 PUSHINT";
 builder store_builder(builder to, builder from) asm "STBR";
+
+int min_gas_for_storage() asm "50000000 PUSHINT";
 
 ;;
 ;;  Storage
@@ -40,13 +38,13 @@ builder store_builder(builder to, builder from) asm "STBR";
     );
 }
 
-() send_static_data(slice to_address, int op, int query_id, builder static_data) impure inline {
+() send_static_data(slice to_address, int query_id, builder static_data) impure inline {
   var msg = begin_cell()
     .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     .store_slice(to_address)
     .store_coins(0)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-    .store_uint(op | 0x80000000, 32)
+    .store_uint(op:report_static_data(), 32)
     .store_uint(query_id, 64)
     .store_builder(static_data);
   return send_raw_message(msg.end_cell(), 64);
@@ -92,9 +90,9 @@ builder store_builder(builder to, builder from) asm "STBR";
     }
 
     if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, transfer_notify(), query_id, owner_address, forward_payload);
+      send_msg(new_owner_address, forward_amount, op:ownership_assigned_notify(), query_id, owner_address, forward_payload);
     }
-    send_msg(response_destination, rest_amount, tranfer_response(), query_id, null(), null());
+    send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), null());
 
     store_data(index, collection_address, new_owner_address, content);
 }
@@ -124,11 +122,11 @@ builder store_builder(builder to, builder from) asm "STBR";
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    if (op == 1) {
+    if (op == op:transfer()) {
       return transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body);
     }
-    if (op == 0x17) {
-      return send_static_data(sender_address, 0x17, query_id,
+    if (op == op:get_static_data()) {
+      return send_static_data(sender_address, query_id,
          begin_cell().store_uint(index, 64).store_slice(collection_address)
          );
     }

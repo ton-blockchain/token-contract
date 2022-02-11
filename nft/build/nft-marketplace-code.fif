@@ -1,0 +1,88 @@
+"Asm.fif" include
+// automatically generated from `stdlib.fc` `op-codes.fc` `nft-marketplace.fc` 
+PROGRAM{
+  DECLPROC load_data
+  DECLPROC save_data
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    LDMSGADDR	//  _6 _5
+    DROP	//  _3
+  }>
+  save_data PROC:<{
+    //  owner_address
+    NEWC	//  owner_address _1
+    SWAP	//  _1 owner_address
+    STSLICER	//  _2
+    ENDC	//  _3
+    c4 POP
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_full in_msg_body
+    s2 POP	//  in_msg_body in_msg_full
+    OVER	//  in_msg_body in_msg_full in_msg_body
+    SEMPTY	//  in_msg_body in_msg_full _3
+    IFJMP:<{	//  in_msg_body in_msg_full
+      2DROP	// 
+    }>	//  in_msg_body in_msg_full
+    CTOS	//  in_msg_body cs
+    4 LDU	//  in_msg_body flags cs
+    SWAP
+    1 PUSHINT	//  in_msg_body cs flags _10=1
+    AND	//  in_msg_body cs _11
+    IFJMP:<{	//  in_msg_body cs
+      2DROP	// 
+    }>	//  in_msg_body cs
+    LDMSGADDR	//  in_msg_body sender_address cs
+    load_data INLINECALLDICT	//  in_msg_body sender_address cs owner_address
+    s1 s2 XCHG	//  in_msg_body cs sender_address owner_address
+    SDEQ	//  in_msg_body cs _18
+    401 THROWIFNOT
+    SWAP	//  cs in_msg_body
+    32 LDU	//  cs op in_msg_body
+    SWAP	//  cs in_msg_body op
+    1 EQINT	//  cs in_msg_body _25
+    IF:<{	//  cs in_msg_body
+      LDVARUINT16	//  cs _89 _88
+      DROP	//  cs amount
+      SWAP	//  amount cs
+      LDREF	//  amount _31 cs
+      LDREF	//  amount _31 _93 _92
+      DROP	//  amount state_init body
+      OVER	//  amount state_init body state_init
+      HASHCU	//  amount state_init body state_init_hash
+      0 PUSHINT	//  amount state_init body state_init_hash _38=0
+      NEWC	//  amount state_init body state_init_hash _38=0 _39
+      8 STI	//  amount state_init body state_init_hash _41
+      256 STU	//  amount state_init body _43
+      ENDC	//  amount state_init body _44
+      CTOS	//  amount state_init body dest_address
+      7 PUSHINT	//  amount state_init body dest_address _51
+      4 PUSHINT	//  amount state_init body dest_address _51 _52=4
+      24 PUSHINT	//  amount state_init body dest_address _51 _52=4 _53=24
+      NEWC	//  amount state_init body dest_address _51 _52=4 _53=24 _54
+      6 STU	//  amount state_init body dest_address _51 _52=4 _56
+      3 STU	//  amount state_init body dest_address _51 _58
+      ROT	//  amount state_init body _51 _58 dest_address
+      STSLICER	//  amount state_init body _51 _59
+      s0 s4 XCHG2	//  _51 state_init body _59 amount
+      STGRAMS	//  _51 state_init body _60
+      s1 s3 XCHG	//  body state_init _51 _60
+      108 STU	//  body state_init _76
+      STREF	//  body _77
+      STREF	//  msg
+      ENDC	//  _79
+      1 PUSHINT	//  _79 _80=1
+      SENDRAWMSG
+    }>ELSE<{
+      2DROP	// 
+    }>
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+}END>c

@@ -1,7 +1,5 @@
 ;; NFT sale smart contract
 
-int transfer_notify() asm "0x11 PUSHINT";
-int tranfer_response() asm "0x80000012 PUSHINT";
 int min_gas_amount() asm "1000000000 PUSHINT";
 int equal_slices (slice a, slice b) asm "SDEQ";
 
@@ -106,7 +104,7 @@ int equal_slices (slice a, slice b) asm "SDEQ";
 
       throw_unless(500, equal_slices(sender_address, nft_address));
       int op = in_msg_body~load_uint(32);
-      throw_unless(501, op == transfer_notify());
+      throw_unless(501, op == op:ownership_assigned_notify());
       int query_id = in_msg_body~load_uint(64);
       slice prev_owner_address = in_msg_body~load_msg_addr();
 

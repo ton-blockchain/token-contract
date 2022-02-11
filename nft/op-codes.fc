@@ -1,0 +1,7 @@
+int op:transfer() asm "0x775424ce PUSHINT";
+int op:ownership_assigned_notify() asm "0x23568697 PUSHINT";
+int op:excesses() asm "0xd53276db PUSHINT";
+int op:get_static_data() asm "0x2fcb26a2 PUSHINT";
+int op:report_static_data() asm "0xb8b98b3d PUSHINT";
+int op:get_royalty_params() asm "0x693d3950 PUSHINT";
+int op:report_royalty_params() asm "0xc3366234 PUSHINT";
