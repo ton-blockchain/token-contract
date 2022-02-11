@@ -87,9 +87,7 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
     int query_id = in_msg_body~load_uint(64);
 
     if (op == op:get_royalty_params()) {
-        send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
-
-        return ();
+        return send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
     }
 
     throw_unless(401, equal_slices(sender_address, owner_address));
@@ -119,8 +117,11 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
           f? = f? < 250; ;; Limit due to limits of action list size
         }
       } until ( ~ f?);
-      save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
-      return ();
+      return save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
+    }
+    if (op == 3) { ;; change owner
+      slice new_owner = in_msg_body~load_msg_addr();
+      return save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
     }
     throw(0xffff);
 }
