@@ -129,7 +129,7 @@ PROGRAM{
     IFJMP:<{	//  in_msg_body cs
       2DROP	// 
     }>	//  in_msg_body cs
-    LDMSGADDR	//  in_msg_body _59 _58
+    LDMSGADDR	//  in_msg_body _88 _87
     DROP	//  in_msg_body sender_address
     load_data INLINECALLDICT	//  in_msg_body sender_address owner_address next_item_index content nft_item_code royalty_params
     s0 s6 XCHG	//  royalty_params sender_address owner_address next_item_index content nft_item_code in_msg_body
@@ -150,8 +150,10 @@ PROGRAM{
     s6 s5 XCPU	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op sender_address owner_address
     SDEQ	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _33
     401 THROWIFNOT
-    1 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code _36
-    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
+    DUP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op op
+    1 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _36
+    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
+      DROP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
       s0 s4 XCHG	//  royalty_params nft_item_code owner_address next_item_index content in_msg_body
       64 LDU	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body
       s1 s3 PUSH2	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body item_index next_item_index
@@ -161,7 +163,7 @@ PROGRAM{
       EQUAL	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body is_last
       SWAP	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last in_msg_body
       LDVARUINT16	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 in_msg_body
-      LDREF	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 _74 _73
+      LDREF	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 _103 _102
       DROP	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 _48
       s7 PUSH
       s3 s4 XCHG
@@ -176,9 +178,48 @@ PROGRAM{
       }>ELSE<{
         5 BLKDROP	// 
       }>
+    }>	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
+    2 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code _55
+    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
+      s0 s4 XCHG	//  royalty_params nft_item_code owner_address next_item_index content in_msg_body
+      LDREF	//  royalty_params nft_item_code owner_address next_item_index content _105 _104
+      DROP	//  royalty_params nft_item_code owner_address next_item_index content deploy_list
+      UNTIL:<{
+        DUP
+        64 PUSHINT	//  royalty_params nft_item_code owner_address next_item_index content deploy_list deploy_list _65=64
+        DICTUREMMIN
+        NULLSWAPIFNOT2	//  royalty_params nft_item_code owner_address next_item_index content deploy_list _106 _108 _107 _109
+        s3 POP	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item item_index
+        s2 PUSH	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item item_index f?
+        IF:<{	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item item_index
+          s0 s5 PUSH2	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item item_index item_index next_item_index
+          LEQ	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item item_index _70
+          402 THROWIFNOT
+          SWAP	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index item
+          LDVARUINT16	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index _72 item
+          LDREF	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index _72 _113 _112
+          DROP	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index _72 _74
+          s2 PUSH
+          s9 s2 s(-1) PUXC2	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index item_index nft_item_code _72 _74
+          deploy_nft_item CALLDICT
+          s4 PUSH	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? item_index next_item_index
+          EQUAL	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? _77
+          s1 s4 XCHG	//  royalty_params nft_item_code owner_address f? content deploy_list next_item_index _77
+          SUB	//  royalty_params nft_item_code owner_address f? content deploy_list next_item_index
+          s0 s3 XCHG
+          250 PUSHINT	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f? _79=250
+          LESS	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f?
+        }>ELSE<{
+          2DROP	//  royalty_params nft_item_code owner_address next_item_index content deploy_list f?
+        }>
+        NOT	//  royalty_params nft_item_code owner_address next_item_index content deploy_list _81
+      }>	//  royalty_params nft_item_code owner_address next_item_index content deploy_list
+      DROP	//  royalty_params nft_item_code owner_address next_item_index content
+      s0 s3 s4 XCHG3	//  owner_address next_item_index content nft_item_code royalty_params
+      save_data INLINECALLDICT
     }>	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
     6 BLKDROP	// 
-    16 PUSHPOW2DEC	//  _54=65535
+    16 PUSHPOW2DEC	//  _83=65535
     THROWANY
   }>
   recv_external PROC:<{

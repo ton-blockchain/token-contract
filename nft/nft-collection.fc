@@ -106,6 +106,22 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
       }
       return ();
     }
+    if (op == 2) { ;; batch deploy of new nfts
+      int counter = 0;
+      cell deploy_list = in_msg_body~load_ref();
+      do {
+        var (deploy_list', item_index, item, f?) = deploy_list.udict_delete_get_min(64);
+        if (f?) {
+          counter += 1;
+          throw_unless(402, item_index <= next_item_index);
+          deploy_nft_item(item_index, nft_item_code, item~load_coins(), item~load_ref());
+          next_item_index -= item_index == next_item_index;
+          f? = f? < 250; ;; Limit due to limits of action list size
+        }
+      } until ( ~ f?);
+      save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
+      return ();
+    }
     throw(0xffff);
 }
 
