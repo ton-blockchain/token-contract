@@ -173,7 +173,7 @@ PROGRAM{
     IFJMP:<{	//  my_balance in_msg_body cs
       3 BLKDROP	// 
     }>	//  my_balance in_msg_body cs
-    LDMSGADDR	//  my_balance in_msg_body _52 _51
+    LDMSGADDR	//  my_balance in_msg_body _54 _53
     DROP	//  my_balance in_msg_body sender_address
     load_data CALLDICT	//  my_balance in_msg_body sender_address init? index collection_address owner_address content
     s0 s4 XCHG	//  my_balance in_msg_body sender_address content index collection_address owner_address init?
@@ -187,7 +187,7 @@ PROGRAM{
       IFJMP:<{	//  index in_msg_body collection_address
         SWAP	//  index collection_address in_msg_body
         LDMSGADDR	//  index collection_address _24 in_msg_body
-        LDREF	//  index collection_address _24 _61 _60
+        LDREF	//  index collection_address _24 _63 _62
         DROP	//  index collection_address _24 _26
         store_data CALLDICT
       }>	//  index in_msg_body collection_address
@@ -223,6 +223,8 @@ PROGRAM{
       send_static_data INLINECALLDICT
     }>	//  collection_address index sender_address query_id
     4 BLKDROP	// 
+    16 PUSHPOW2DEC	//  _49=65535
+    THROWANY
   }>
   recv_external PROC:<{
     //  in_msg
