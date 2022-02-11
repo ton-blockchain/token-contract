@@ -1,0 +1,204 @@
+;;
+;;  TON NFT Item Smart Contract
+;;
+
+int equal_slices (slice a, slice b) asm "SDEQ";
+int slice_null?(slice s) asm "ISNULL";
+builder store_builder(builder to, builder from) asm "STBR";
+
+forall X, Y, Z, W, V -> [X, Y, Z, W, V] tuple5(X x, Y y, Z z, W w, V v) asm "5 TUPLE";
+forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUPLE";
+
+forall X, Y, Z, W, V -> X <0>([X, Y, Z, W, V] p) asm "FIRST";
+forall X, Y, Z, W, V -> Y <1>([X, Y, Z, W, V] p) asm "SECOND";
+forall X, Y, Z, W, V -> Z <2>([X, Y, Z, W, V] p) asm "THIRD";
+forall X, Y, Z, W, V -> Z <3>([X, Y, Z, W, V] p) asm "3 INDEX";
+
+int min_gas_for_storage() asm "50000000 PUSHINT";
+
+;;
+;;  Storage
+;;
+;;  uint64 index
+;;  MsgAddressInt collection_address
+;;  MsgAddressInt owner_address
+;;  MsgAddressInt editor_address
+;;  cell content
+;;
+
+(int, int, slice, slice, slice, cell) load_data() impure {
+    slice ds = get_data().begin_parse();
+    var (index, collection_address) = (ds~load_uint(64), ds~load_msg_addr());
+    if (ds.slice_bits() > 0) {
+      return (-1, index, collection_address, ds~load_msg_addr(), ds~load_msg_addr(), ds~load_ref());
+    } else {  
+      return (0, index, collection_address, null(), null(), null()); ;; nft not initialized yet
+    }
+}
+
+() store_data(int index, slice collection_address, slice owner_address, slice editor_address, cell content) impure {
+    set_data(
+        begin_cell()
+            .store_uint(index, 64)
+            .store_slice(collection_address)
+            .store_slice(owner_address)
+            .store_slice(editor_address)
+            .store_ref(content)
+            .end_cell()
+    );
+}
+
+() send_static_data(slice to_address, int query_id, builder static_data) impure inline {
+  var msg = begin_cell()
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_slice(to_address)
+    .store_coins(0)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op:report_static_data(), 32)
+    .store_uint(query_id, 64)
+    .store_builder(static_data);
+  return send_raw_message(msg.end_cell(), 64);
+}
+
+() send_msg(slice to_address, int amount, int op, int query_id, slice payload1, slice payload2) impure inline {
+  if (to_address.preload_uint(2) == 0) { ;; addr_none: 00
+    return ();
+  }
+  
+  var msg = begin_cell()
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_slice(to_address)
+    .store_coins(amount)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op, 32)
+    .store_uint(query_id, 64);
+   
+  if (~ payload1.slice_null?()) {
+    msg = msg.store_slice(payload1);
+  }
+
+  if (~ payload2.slice_null?()) { 
+    msg = msg.store_slice(payload2);
+  }
+
+  return send_raw_message(msg.end_cell(), 1); ;; paying fees, revert on errors
+}
+
+() transfer_ownership(int my_balance,
+    ;;[int index, slice collection_address, slice owner_address, slice editor, cell content]
+    [int, slice, slice, slice, cell] storage,
+    slice sender_address, int query_id, slice in_msg_body) impure {
+    slice new_owner_address = in_msg_body~load_msg_addr();
+    throw_unless(401, equal_slices(sender_address, storage.<2>()));
+
+    slice response_destination = in_msg_body~load_msg_addr();
+    in_msg_body~load_int(1); ;; Base nft ignores InPayload
+    int forward_amount = in_msg_body~load_coins();
+    int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
+    throw_unless(402, rest_amount > 0);
+    ;; base nft spends fixed amount of gas, will not check for response
+    var forward_payload = in_msg_body;
+    if (forward_payload~load_int(1)) {
+      forward_payload = forward_payload.preload_ref().begin_parse();
+    }
+
+    if (forward_amount) {
+      send_msg(new_owner_address, forward_amount, op:ownership_assigned_notify(), query_id, storage.<2>(), forward_payload);
+    }
+    send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), null());
+    (int _index, slice _collection_address, slice _owner_address, slice _editor_address, cell _content) =
+      untuple5(storage);
+    store_data(_index, _collection_address, new_owner_address, _editor_address, _content);
+}
+
+() edit(int my_balance,
+    ;;[int index, slice collection_address, slice owner_address, slice editor, cell content]
+    [int, slice, slice, slice, cell] storage,
+    slice sender_address, int query_id, slice in_msg_body) impure {
+    slice new_owner_address = in_msg_body~load_msg_addr();
+    throw_unless(401, equal_slices(sender_address, storage.<3>()));
+
+    int mode = in_msg_body~load_uint(8);
+    if(mode == 0) {
+      (int _index, slice _collection_address, slice _owner_address, slice _editor_address, cell _content) =
+      untuple5(storage);
+      return store_data(_index, _collection_address, _owner_address, _editor_address, in_msg_body~load_ref());
+    }
+    if(mode == 1) {
+      slice new_editor_address = in_msg_body~load_msg_addr();
+      slice response_destination = in_msg_body~load_msg_addr();
+      in_msg_body~load_int(1); ;; Base nft ignores InPayload
+      int forward_amount = in_msg_body~load_coins();
+      int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
+      throw_unless(402, rest_amount > 0);
+      ;; base nft spends fixed amount of gas, will not check for response
+      var forward_payload = in_msg_body;
+      if (forward_payload~load_int(1)) {
+        forward_payload = forward_payload.preload_ref().begin_parse();
+      }
+      if (forward_amount) {
+        send_msg(new_editor_address, forward_amount, op:editorship_assigned_notify(), query_id, storage.<3>(), forward_payload);
+      }
+      send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), null());
+      (int _index, slice _collection_address, slice _owner_address, slice _editor_address, cell _content) =
+      untuple5(storage);
+      return store_data(_index, _collection_address, _owner_address, new_editor_address, _content);
+    }
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) {
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+
+    if (flags & 1) { ;; ignore all bounced messages
+        return ();
+    }
+    slice sender_address = cs~load_msg_addr();
+
+    (int init?, int _index, slice _collection_address, slice _owner_address, slice _editor_address, cell _content) = load_data();
+    [int, slice, slice, slice, cell] storage = tuple5(_index, _collection_address, _owner_address, _editor_address, _content);
+    if (~ init?) {
+      if (equal_slices(storage.<1>(), sender_address)) {
+        return store_data(storage.<0>(), storage.<1>(), in_msg_body~load_msg_addr(), in_msg_body~load_msg_addr(), in_msg_body~load_ref());
+      } else {
+        return throw(405);
+      }
+    }
+
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    if (op == op:transfer()) {
+      return transfer_ownership(my_balance, storage, sender_address, query_id, in_msg_body);
+    }
+    if (op == op:edit()) {
+      return edit(my_balance, storage, sender_address, query_id, in_msg_body);
+    }
+    if (op == op:get_static_data()) {
+      return send_static_data(sender_address, query_id,
+         begin_cell().store_uint(storage.<0>(), 64).store_slice(storage.<1>())
+         );
+    }
+    throw(0xffff);
+}
+
+() recv_external(slice in_msg) {
+}
+
+;;
+;;  GET Methods
+;;
+
+(int, int, slice, slice, cell) get_nft_data() method_id {
+  (int init?, int index, slice collection_address, slice owner_address, slice editor_address, cell content) = load_data();
+  return (init?, index, collection_address, owner_address, content);
+}
+
+(slice) get_editor() method_id {
+  (_, _, _, _, slice editor_address, _) = load_data();
+  return editor_address;
+}

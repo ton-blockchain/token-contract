@@ -5,6 +5,8 @@ rm build/nft-sale-code.fif
 
 func -o build/nft-item-code.fif -SPA stdlib.fc op-codes.fc nft-item.fc
 func -o build/nft-collection-code.fif -SPA stdlib.fc op-codes.fc nft-collection.fc
+func -o build/nft-editable-item-code.fif -SPA stdlib.fc op-codes.fc NFTEditable/nft-item.fc
+func -o build/nft-editable-collection-code.fif -SPA stdlib.fc op-codes.fc NFTEditable/nft-collection.fc
 func -o build/nft-marketplace-code.fif -SPA stdlib.fc op-codes.fc nft-marketplace.fc
 func -o build/nft-sale-code.fif -SPA stdlib.fc op-codes.fc nft-sale.fc
 

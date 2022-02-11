@@ -5,3 +5,7 @@ int op:get_static_data() asm "0x2fcb26a2 PUSHINT";
 int op:report_static_data() asm "0xb8b98b3d PUSHINT";
 int op:get_royalty_params() asm "0x693d3950 PUSHINT";
 int op:report_royalty_params() asm "0xc3366234 PUSHINT";
+
+;; NFTEditable
+int op:edit() asm "0x53962656 PUSHINT";
+int op:editorship_assigned_notify() asm "0x775f4f65 PUSHINT";

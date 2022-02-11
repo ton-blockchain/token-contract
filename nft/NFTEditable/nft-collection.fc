@@ -123,6 +123,9 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
       slice new_owner = in_msg_body~load_msg_addr();
       return save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
     }
+    if (op == 4) { ;; change content
+      return save_data(owner_address, next_item_index, in_msg_body~load_ref(), nft_item_code, in_msg_body~load_ref());
+    }
     throw(0xffff);
 }
 
