@@ -66,7 +66,7 @@ slice calculate_nft_item_address(int workchain, cell state_init) {
     .store_uint(op:report_royalty_params(), 32)
     .store_uint(query_id, 64)
     .store_slice(data);
-  return send_raw_message(msg.end_cell(), 64);
+  send_raw_message(msg.end_cell(), 64); ;; carry all the remaining value of the inbound message
 }
 
 () recv_internal(cell in_msg_full, slice in_msg_body) impure {
@@ -87,7 +87,8 @@ slice calculate_nft_item_address(int workchain, cell state_init) {
     int query_id = in_msg_body~load_uint(64);
 
     if (op == op:get_royalty_params()) {
-        return send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
+        send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
+        return ();
     }
 
     throw_unless(401, equal_slices(sender_address, owner_address));
@@ -108,22 +109,27 @@ slice calculate_nft_item_address(int workchain, cell state_init) {
       int counter = 0;
       cell deploy_list = in_msg_body~load_ref();
       do {
-        var (deploy_list', item_index, item, f?) = deploy_list.udict_delete_get_min(64);
+        var (item_index, item, f?) = deploy_list~udict::delete_get_min(64);
         if (f?) {
           counter += 1;
-          throw_unless(402, item_index <= next_item_index);
+          if (counter >= 250) { ;; Limit due to limits of action list size
+            throw(399);
+          }
+
+          throw_unless(402 + counter, item_index <= next_item_index);
           deploy_nft_item(item_index, nft_item_code, item~load_coins(), item~load_ref());
           if (item_index == next_item_index) {
             next_item_index += 1;
           }
-          f? = counter < 250; ;; Limit due to limits of action list size
         }
       } until ( ~ f?);
-      return save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
+      save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
+      return ();
     }
     if (op == 3) { ;; change owner
       slice new_owner = in_msg_body~load_msg_addr();
-      return save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
+      save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
+      return ();
     }
     throw(0xffff);
 }
