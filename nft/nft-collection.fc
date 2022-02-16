@@ -36,10 +36,10 @@ cell calculate_nft_item_state_init(int item_index, cell nft_item_code) {
   return begin_cell().store_uint(0, 2).store_dict(nft_item_code).store_dict(data).store_uint(0, 1).end_cell();
 }
 
-slice calculate_nft_item_address(int workchain, cell init_data) {
+slice calculate_nft_item_address(int workchain, cell state_init) {
   return begin_cell().store_uint(4, 3)
                      .store_int(workchain, 8)
-                     .store_uint(cell_hash(init_data), 256)
+                     .store_uint(cell_hash(state_init), 256)
                      .end_cell()
                      .begin_parse();
 }
@@ -113,8 +113,10 @@ slice calculate_nft_item_address(int workchain, cell init_data) {
           counter += 1;
           throw_unless(402, item_index <= next_item_index);
           deploy_nft_item(item_index, nft_item_code, item~load_coins(), item~load_ref());
-          next_item_index -= item_index == next_item_index;
-          f? = f? < 250; ;; Limit due to limits of action list size
+          if (item_index == next_item_index) {
+            next_item_index += 1;
+          }
+          f? = counter < 250; ;; Limit due to limits of action list size
         }
       } until ( ~ f?);
       return save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
@@ -149,7 +151,7 @@ slice get_nft_address_by_index(index) method_id {
      return (rs~load_uint(16), rs~load_uint(16), rs~load_msg_addr());
 }
 
-(cell) member_content(int index, cell individual_content) {
+cell get_nft_content(int index, cell individual_nft_content) method_id {
   var (_, _, content, _, _) = load_data();
   slice cs = content.begin_parse();
   cs~load_ref();
@@ -157,6 +159,6 @@ slice get_nft_address_by_index(index) method_id {
   return (begin_cell()
                       .store_uint(1, 8) ;; offchain tag
                       .store_slice(common_content)
-                      .store_ref(individual_content)
+                      .store_ref(individual_nft_content)
           .end_cell());
 }

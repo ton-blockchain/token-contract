@@ -101,18 +101,18 @@ PROGRAM{
     SENDRAWMSG
     0 PUSHINT	//  query_id sender_address nft_address _98=0
     DUP	//  query_id sender_address nft_address _98=0 _99=0
-    1 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100=1
-    OVER	//  query_id sender_address nft_address _98=0 _99=0 _100=1 _101=0
-    24 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100=1 _101=0 _102=24
-    NEWC	//  query_id sender_address nft_address _98=0 _99=0 _100=1 _101=0 _102=24 _103
-    6 STU	//  query_id sender_address nft_address _98=0 _99=0 _100=1 _101=0 _105
-    s0 s5 XCHG2	//  query_id sender_address _101=0 _98=0 _99=0 _100=1 _105 nft_address
-    STSLICER	//  query_id sender_address _101=0 _98=0 _99=0 _100=1 _106
-    s2 PUSH	//  query_id sender_address _101=0 _98=0 _99=0 _100=1 _106 _107=0
-    STVARUINT16	//  query_id sender_address _101=0 _98=0 _99=0 _100=1 _108
-    s1 s4 XCHG	//  query_id sender_address _100=1 _98=0 _99=0 _101=0 _108
-    107 STU	//  query_id sender_address _100=1 _98=0 _99=0 _122
-    s1 s3 XCHG	//  query_id sender_address _99=0 _98=0 _100=1 _122
+    0x5fcc3d14 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100
+    OVER	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0
+    24 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _102=24
+    NEWC	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _102=24 _103
+    6 STU	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _105
+    s0 s5 XCHG2	//  query_id sender_address _101=0 _98=0 _99=0 _100 _105 nft_address
+    STSLICER	//  query_id sender_address _101=0 _98=0 _99=0 _100 _106
+    s2 PUSH	//  query_id sender_address _101=0 _98=0 _99=0 _100 _106 _107=0
+    STVARUINT16	//  query_id sender_address _101=0 _98=0 _99=0 _100 _108
+    s1 s4 XCHG	//  query_id sender_address _100 _98=0 _99=0 _101=0 _108
+    107 STU	//  query_id sender_address _100 _98=0 _99=0 _122
+    s1 s3 XCHG	//  query_id sender_address _99=0 _98=0 _100 _122
     32 STU	//  query_id sender_address _99=0 _98=0 _124
     s1 s4 XCHG	//  _98=0 sender_address _99=0 query_id _124
     64 STU	//  _98=0 sender_address _99=0 _126
@@ -160,7 +160,7 @@ PROGRAM{
       500 THROWIFNOT
       s0 s2 XCHG	//  fees_cell full_price marketplace_address nft_address in_msg_body
       32 LDU	//  fees_cell full_price marketplace_address nft_address op in_msg_body
-      0x23568697 PUSHINT	//  fees_cell full_price marketplace_address nft_address op in_msg_body _35
+      0x05138d91 PUSHINT	//  fees_cell full_price marketplace_address nft_address op in_msg_body _35
       s1 s2 XCHG	//  fees_cell full_price marketplace_address nft_address in_msg_body op _35
       EQUAL	//  fees_cell full_price marketplace_address nft_address in_msg_body _36
       501 THROWIFNOT
@@ -213,18 +213,18 @@ PROGRAM{
       457 THROWIFNOT
       0 PUSHINT	//  nft_address query_id nft_owner_address _69=0
       DUP	//  nft_address query_id nft_owner_address _69=0 _70=0
-      1 PUSHINT	//  nft_address query_id nft_owner_address _69=0 _70=0 _71=1
-      OVER	//  nft_address query_id nft_owner_address _69=0 _70=0 _71=1 _72=0
-      16 PUSHINT	//  nft_address query_id nft_owner_address _69=0 _70=0 _71=1 _72=0 _73=16
-      NEWC	//  nft_address query_id nft_owner_address _69=0 _70=0 _71=1 _72=0 _73=16 _74
-      6 STU	//  nft_address query_id nft_owner_address _69=0 _70=0 _71=1 _72=0 _76
-      s0 s7 XCHG2	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71=1 _76 nft_address
-      STSLICER	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71=1 _77
-      s2 PUSH	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71=1 _77 _78=0
-      STVARUINT16	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71=1 _79
-      s1 s6 XCHG	//  _71=1 query_id nft_owner_address _69=0 _70=0 _72=0 _79
-      107 STU	//  _71=1 query_id nft_owner_address _69=0 _70=0 _93
-      s1 s5 XCHG	//  _70=0 query_id nft_owner_address _69=0 _71=1 _93
+      0x5fcc3d14 PUSHINT	//  nft_address query_id nft_owner_address _69=0 _70=0 _71
+      OVER	//  nft_address query_id nft_owner_address _69=0 _70=0 _71 _72=0
+      16 PUSHINT	//  nft_address query_id nft_owner_address _69=0 _70=0 _71 _72=0 _73=16
+      NEWC	//  nft_address query_id nft_owner_address _69=0 _70=0 _71 _72=0 _73=16 _74
+      6 STU	//  nft_address query_id nft_owner_address _69=0 _70=0 _71 _72=0 _76
+      s0 s7 XCHG2	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71 _76 nft_address
+      STSLICER	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71 _77
+      s2 PUSH	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71 _77 _78=0
+      STVARUINT16	//  _72=0 query_id nft_owner_address _69=0 _70=0 _71 _79
+      s1 s6 XCHG	//  _71 query_id nft_owner_address _69=0 _70=0 _72=0 _79
+      107 STU	//  _71 query_id nft_owner_address _69=0 _70=0 _93
+      s1 s5 XCHG	//  _70=0 query_id nft_owner_address _69=0 _71 _93
       32 STU	//  _70=0 query_id nft_owner_address _69=0 _95
       s1 s3 XCHG	//  _70=0 _69=0 nft_owner_address query_id _95
       64 STU	//  _70=0 _69=0 nft_owner_address _97

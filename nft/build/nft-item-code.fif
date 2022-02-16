@@ -48,7 +48,7 @@ PROGRAM{
   }>
   send_static_data PROC:<{
     //  to_address query_id static_data
-    0xb8b98b3d PUSHINT	//  to_address query_id static_data _4
+    0x8b771735 PUSHINT	//  to_address query_id static_data _4
     0 PUSHINT	//  to_address query_id static_data _4 _5=0
     16 PUSHINT	//  to_address query_id static_data _4 _5=0 _6=16
     NEWC	//  to_address query_id static_data _4 _5=0 _6=16 _7
@@ -139,7 +139,7 @@ PROGRAM{
     }>	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload
     OVER	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload forward_amount
     IF:<{	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload
-      0x23568697 PUSHINT	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload _37
+      0x05138d91 PUSHINT	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload _37
       s5 PUSH
       s5 s4 s2 PUXC2
       s1 s9 XCHG	//  rest_amount index collection_address response_destination content new_owner_address query_id new_owner_address forward_amount _37 query_id owner_address forward_payload
@@ -197,7 +197,7 @@ PROGRAM{
     s0 s5 XCHG	//  my_balance owner_address sender_address content index collection_address in_msg_body
     32 LDU	//  my_balance owner_address sender_address content index collection_address op in_msg_body
     64 LDU	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body
-    0x775424ce PUSHINT	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body _39
+    0x5fcc3d14 PUSHINT	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body _39
     s3 s(-1) PUXC	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body op _39
     EQUAL	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body _40
     IFJMP:<{	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body

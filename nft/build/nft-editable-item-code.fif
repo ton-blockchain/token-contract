@@ -54,7 +54,7 @@ PROGRAM{
   }>
   send_static_data PROC:<{
     //  to_address query_id static_data
-    0xb8b98b3d PUSHINT	//  to_address query_id static_data _4
+    0x8b771735 PUSHINT	//  to_address query_id static_data _4
     0 PUSHINT	//  to_address query_id static_data _4 _5=0
     16 PUSHINT	//  to_address query_id static_data _4 _5=0 _6=16
     NEWC	//  to_address query_id static_data _4 _5=0 _6=16 _7
@@ -147,7 +147,7 @@ PROGRAM{
     }>	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload
     OVER	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload forward_amount
     IF:<{	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload
-      0x23568697 PUSHINT	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload _35
+      0x05138d91 PUSHINT	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload _35
       s6 PUSH	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload _35 storage
       THIRD	//  rest_amount storage new_owner_address query_id response_destination forward_amount forward_payload _35 _36
       s6 PUSH
@@ -219,7 +219,7 @@ PROGRAM{
       }>	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload
       OVER	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload forward_amount
       IF:<{	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload
-        0x775f4f65 PUSHINT	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload _55
+        0x511a4463 PUSHINT	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload _55
         s6 PUSH	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload _55 storage
         3 INDEX	//  rest_amount storage query_id new_editor_address response_destination forward_amount forward_payload _55 _56
         s5 PUSH
@@ -288,7 +288,7 @@ PROGRAM{
     s0 s2 XCHG	//  my_balance storage sender_address in_msg_body
     32 LDU	//  my_balance storage sender_address op in_msg_body
     64 LDU	//  my_balance storage sender_address op query_id in_msg_body
-    0x775424ce PUSHINT	//  my_balance storage sender_address op query_id in_msg_body _47
+    0x5fcc3d14 PUSHINT	//  my_balance storage sender_address op query_id in_msg_body _47
     s3 s(-1) PUXC	//  my_balance storage sender_address op query_id in_msg_body op _47
     EQUAL	//  my_balance storage sender_address op query_id in_msg_body _48
     IFJMP:<{	//  my_balance storage sender_address op query_id in_msg_body
