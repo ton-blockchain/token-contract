@@ -8,7 +8,6 @@ PROGRAM{
   DECLPROC deploy_nft_item
   DECLPROC send_royalty_params
   DECLPROC recv_internal
-  DECLPROC recv_external
   102491 DECLMETHOD get_collection_data
   92067 DECLMETHOD get_nft_address_by_index
   85719 DECLMETHOD royalty_params
@@ -201,8 +200,8 @@ PROGRAM{
           IF:<{	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
             399 THROW
           }>	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
-          402 PUSHINT	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=402
-          OVER	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=402 counter
+          403 PUSHINT	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=403
+          OVER	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=403 counter
           ADD	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74
           s2 s7 PUSH2	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74 item_index next_item_index
           LEQ	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74 _75
@@ -245,10 +244,6 @@ PROGRAM{
     5 BLKDROP	// 
     16 PUSHPOW2DEC	//  _93=65535
     THROWANY
-  }>
-  recv_external PROC:<{
-    //  in_msg
-    DROP	// 
   }>
   get_collection_data PROC:<{
     // 

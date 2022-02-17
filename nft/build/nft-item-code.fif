@@ -7,7 +7,6 @@ PROGRAM{
   DECLPROC send_msg
   DECLPROC transfer_ownership
   DECLPROC recv_internal
-  DECLPROC recv_external
   102351 DECLMETHOD get_nft_data
   load_data PROC:<{
     // 
@@ -225,10 +224,6 @@ PROGRAM{
     4 BLKDROP	// 
     16 PUSHPOW2DEC	//  _49=65535
     THROWANY
-  }>
-  recv_external PROC:<{
-    //  in_msg
-    DROP	// 
   }>
   get_nft_data PROC:<{
     // 
