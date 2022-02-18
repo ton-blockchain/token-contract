@@ -140,10 +140,10 @@ slice calculate_nft_item_address(int workchain, cell state_init) {
 
 ;; Get methods
 
-(int, slice, cell) get_collection_data() method_id {
+(int, cell, slice) get_collection_data() method_id {
   var (owner_address, next_item_index, content, _, _) = load_data();
   slice cs = content.begin_parse();
-  return (next_item_index, owner_address, cs~load_ref());
+  return (next_item_index, cs~load_ref(), owner_address);
 }
 
 slice get_nft_address_by_index(int index) method_id {

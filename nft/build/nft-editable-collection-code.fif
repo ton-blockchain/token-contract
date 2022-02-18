@@ -264,7 +264,7 @@ PROGRAM{
     CTOS	//  owner_address next_item_index cs
     LDREF	//  owner_address next_item_index _16 _15
     DROP	//  owner_address next_item_index _8
-    s1 s2 XCHG	//  next_item_index owner_address _8
+    ROT	//  next_item_index _8 owner_address
   }>
   get_nft_address_by_index PROC:<{
     //  index
