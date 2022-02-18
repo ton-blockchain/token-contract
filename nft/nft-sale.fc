@@ -74,9 +74,9 @@ int equal_slices (slice a, slice b) asm "SDEQ";
            .store_uint(query_id, 64)
            .store_slice(sender_address) ;; new_owner_address
            .store_slice(sender_address) ;; response_address
-           .store_int(0, 1) ;; empty InPayload
+           .store_int(0, 1) ;; empty custom_payload
            .store_coins(0) ;; forward amount to new_owner_address
-           .store_int(0, 1); ;; empty ForwardPayload
+           .store_int(0, 1); ;; empty forward_payload
 
 
   send_raw_message(nft_msg.end_cell(), 128 + 32);
@@ -146,9 +146,9 @@ int equal_slices (slice a, slice b) asm "SDEQ";
            .store_uint(query_id, 64) 
            .store_slice(nft_owner_address) ;; new_owner_address
            .store_slice(nft_owner_address) ;; response_address;
-           .store_int(0, 1) ;; empty InPayload
+           .store_int(0, 1) ;; empty custom_payload
            .store_coins(0) ;; forward amount to new_owner_address
-           .store_int(0, 1); ;; empty ForwardPayload
+           .store_int(0, 1); ;; empty forward_payload
 
         send_raw_message(msg.end_cell(), 128 + 32);
 

@@ -92,7 +92,7 @@ PROGRAM{
   }>
   send_royalty_params PROC:<{
     //  to_address query_id data
-    0xf0f8fe3c PUSHINT	//  to_address query_id data _4
+    0xa8cb00ad PUSHINT	//  to_address query_id data _4
     0 PUSHINT	//  to_address query_id data _4 _5=0
     16 PUSHINT	//  to_address query_id data _4 _5=0 _6=16
     NEWC	//  to_address query_id data _4 _5=0 _6=16 _7

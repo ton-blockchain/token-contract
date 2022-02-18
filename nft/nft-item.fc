@@ -64,13 +64,9 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
 
     int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
     throw_unless(402, rest_amount > 0); ;; base nft spends fixed amount of gas, will not check for response
-    var forward_payload = in_msg_body;
-    if (forward_payload~load_int(1)) {
-      forward_payload = forward_payload.preload_ref().begin_parse();
-    }
 
     if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, op:ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(forward_payload), 1);  ;; paying fees, revert on errors
+      send_msg(new_owner_address, forward_amount, op:ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
     }
     if (response_destination.preload_uint(2) != 0) { ;; if NOT addr_none: 00
       send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), 1); ;; paying fees, revert on errors
@@ -107,7 +103,7 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
       return ();
     }
     if (op == op:get_static_data()) {
-      send_msg(sender_address, 0, op:report_static_data(), query_id, begin_cell().store_uint(index, 64).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
+      send_msg(sender_address, 0, op:report_static_data(), query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
       return ();
     }
     throw(0xffff);
