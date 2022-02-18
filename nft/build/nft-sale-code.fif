@@ -242,7 +242,8 @@ PROGRAM{
       SENDRAWMSG
     }>	//  nft_address msg_value nft_owner_address query_id
     4 BLKDROP	// 
-    451 THROW
+    16 PUSHPOW2DEC	//  _111=65535
+    THROWANY
   }>
   recv_external PROC:<{
     //  in_msg

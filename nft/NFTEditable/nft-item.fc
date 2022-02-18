@@ -103,7 +103,7 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
     }
 
     if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, op:ownership_assigned_notify(), query_id, storage.<2>(), forward_payload);
+      send_msg(new_owner_address, forward_amount, op:ownership_assigned(), query_id, storage.<2>(), forward_payload);
     }
     send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), null());
     (int _index, slice _collection_address, slice _owner_address, slice _editor_address, cell _content) =

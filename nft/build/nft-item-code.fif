@@ -3,7 +3,6 @@
 PROGRAM{
   DECLPROC load_data
   DECLPROC store_data
-  DECLPROC send_static_data
   DECLPROC send_msg
   DECLPROC transfer_ownership
   DECLPROC recv_internal
@@ -45,69 +44,34 @@ PROGRAM{
     ENDC	//  _10
     c4 POP
   }>
-  send_static_data PROC:<{
-    //  to_address query_id static_data
-    0x8b771735 PUSHINT	//  to_address query_id static_data _4
-    0 PUSHINT	//  to_address query_id static_data _4 _5=0
-    16 PUSHINT	//  to_address query_id static_data _4 _5=0 _6=16
-    NEWC	//  to_address query_id static_data _4 _5=0 _6=16 _7
-    6 STU	//  to_address query_id static_data _4 _5=0 _9
-    s0 s5 XCHG2	//  _5=0 query_id static_data _4 _9 to_address
-    STSLICER	//  _5=0 query_id static_data _4 _10
-    s4 PUSH	//  _5=0 query_id static_data _4 _10 _11=0
-    STVARUINT16	//  _5=0 query_id static_data _4 _12
-    s1 s4 XCHG	//  _4 query_id static_data _5=0 _12
-    107 STU	//  _4 query_id static_data _26
-    s1 s3 XCHG	//  static_data query_id _4 _26
-    32 STU	//  static_data query_id _28
-    64 STU	//  static_data _30
-    SWAP	//  _30 static_data
-    STBR	//  msg
-    ENDC	//  _32
-    64 PUSHINT	//  _32 _33=64
-    SENDRAWMSG
-  }>
   send_msg PROC:<{
-    //  to_address amount op query_id payload1 payload2
-    s5 PUSH	//  to_address amount op query_id payload1 payload2 to_address
-    2 PLDU	//  to_address amount op query_id payload1 payload2 _7
-    0 EQINT	//  to_address amount op query_id payload1 payload2 _9
-    IFJMP:<{	//  to_address amount op query_id payload1 payload2
-      6 BLKDROP	// 
-    }>	//  to_address amount op query_id payload1 payload2
-    0 PUSHINT	//  to_address amount op query_id payload1 payload2 _11=0
-    16 PUSHINT	//  to_address amount op query_id payload1 payload2 _11=0 _12=16
-    NEWC	//  to_address amount op query_id payload1 payload2 _11=0 _12=16 _13
-    6 STU	//  to_address amount op query_id payload1 payload2 _11=0 _15
-    s0 s7 XCHG2	//  _11=0 amount op query_id payload1 payload2 _15 to_address
-    STSLICER	//  _11=0 amount op query_id payload1 payload2 _16
-    s0 s5 XCHG2	//  _11=0 payload2 op query_id payload1 _16 amount
-    STVARUINT16	//  _11=0 payload2 op query_id payload1 _17
-    s1 s5 XCHG	//  payload1 payload2 op query_id _11=0 _17
-    107 STU	//  payload1 payload2 op query_id _31
-    s1 s2 XCHG	//  payload1 payload2 query_id op _31
-    32 STU	//  payload1 payload2 query_id _33
-    64 STU	//  payload1 payload2 msg
-    s2 PUSH	//  payload1 payload2 msg payload1
-    ISNULL	//  payload1 payload2 msg _36
-    NOT	//  payload1 payload2 msg _37
-    IF:<{	//  payload1 payload2 msg
-      ROT	//  payload2 msg payload1
-      STSLICER	//  payload2 msg
-      SWAP	//  msg payload2
+    //  to_address amount op query_id payload send_mode
+    0 PUSHINT	//  to_address amount op query_id payload send_mode _7=0
+    16 PUSHINT	//  to_address amount op query_id payload send_mode _7=0 _8=16
+    NEWC	//  to_address amount op query_id payload send_mode _7=0 _8=16 _9
+    6 STU	//  to_address amount op query_id payload send_mode _7=0 _11
+    s0 s7 XCHG2	//  _7=0 amount op query_id payload send_mode _11 to_address
+    STSLICER	//  _7=0 amount op query_id payload send_mode _12
+    s0 s5 XCHG2	//  _7=0 send_mode op query_id payload _12 amount
+    STVARUINT16	//  _7=0 send_mode op query_id payload _13
+    s1 s5 XCHG	//  payload send_mode op query_id _7=0 _13
+    107 STU	//  payload send_mode op query_id _27
+    s1 s2 XCHG	//  payload send_mode query_id op _27
+    32 STU	//  payload send_mode query_id _29
+    64 STU	//  payload send_mode msg
+    s2 PUSH	//  payload send_mode msg payload
+    ISNULL	//  payload send_mode msg _32
+    NOT	//  payload send_mode msg _33
+    IF:<{	//  payload send_mode msg
+      ROT	//  send_mode msg payload
+      STBR	//  send_mode msg
+      SWAP	//  msg send_mode
     }>ELSE<{
-      s2 POP	//  msg payload2
+      s2 POP	//  msg send_mode
     }>
-    DUP	//  msg payload2 payload2
-    ISNULL	//  msg payload2 _39
-    NOT	//  msg payload2 _40
-    IF:<{	//  msg payload2
-      STSLICER	//  msg
-    }>ELSE<{
-      DROP	//  msg
-    }>
-    ENDC	//  _42
-    1 PUSHINT	//  _42 _43=1
+    SWAP	//  send_mode msg
+    ENDC	//  send_mode _35
+    SWAP	//  _35 send_mode
     SENDRAWMSG
   }>
   transfer_ownership PROC:<{
@@ -118,7 +82,7 @@ PROGRAM{
     401 THROWIFNOT
     s0 s2 XCHG	//  my_balance index collection_address owner_address content new_owner_address query_id in_msg_body
     LDMSGADDR	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination in_msg_body
-    1 LDI	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination _49 _48
+    1 LDI	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination _57 _56
     NIP	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination in_msg_body
     LDVARUINT16	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination forward_amount in_msg_body
     50000000 PUSHINT	//  my_balance index collection_address owner_address content new_owner_address query_id response_destination forward_amount in_msg_body _24
@@ -139,21 +103,37 @@ PROGRAM{
     OVER	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload forward_amount
     IF:<{	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload
       0x05138d91 PUSHINT	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload _37
+      NEWC	//  rest_amount index collection_address owner_address content new_owner_address query_id response_destination forward_amount forward_payload _37 _38
+      s0 s8 XCHG2	//  rest_amount index collection_address _37 content new_owner_address query_id response_destination forward_amount forward_payload _38 owner_address
+      STSLICER	//  rest_amount index collection_address _37 content new_owner_address query_id response_destination forward_amount forward_payload _39
+      SWAP	//  rest_amount index collection_address _37 content new_owner_address query_id response_destination forward_amount _39 forward_payload
+      STSLICER	//  rest_amount index collection_address _37 content new_owner_address query_id response_destination forward_amount _40
+      1 PUSHINT	//  rest_amount index collection_address _37 content new_owner_address query_id response_destination forward_amount _40 _41=1
       s5 PUSH
-      s5 s4 s2 PUXC2
-      s1 s9 XCHG	//  rest_amount index collection_address response_destination content new_owner_address query_id new_owner_address forward_amount _37 query_id owner_address forward_payload
+      s8 s1 s4 XCHG3
+      s5 s8 s(-1) PUXC2	//  rest_amount index collection_address response_destination content new_owner_address query_id new_owner_address forward_amount _37 query_id _40 _41=1
       send_msg INLINECALLDICT
     }>ELSE<{
       2DROP
       s4 POP	//  rest_amount index collection_address response_destination content new_owner_address query_id
     }>
-    0xd53276db PUSHINT	//  rest_amount index collection_address response_destination content new_owner_address query_id _39
-    s3 s4 XCHG
-    s7 s0 s0 XCHG3
-    PUSHNULL
-    PUSHNULL	//  new_owner_address index collection_address content response_destination rest_amount _39 query_id _40 _41
-    send_msg INLINECALLDICT
-    s1 s3 s0 XCHG3	//  index collection_address new_owner_address content
+    s3 PUSH	//  rest_amount index collection_address response_destination content new_owner_address query_id response_destination
+    2 PLDU	//  rest_amount index collection_address response_destination content new_owner_address query_id _44
+    0 NEQINT	//  rest_amount index collection_address response_destination content new_owner_address query_id _46
+    IF:<{	//  rest_amount index collection_address response_destination content new_owner_address query_id
+      0xd53276db PUSHINT	//  rest_amount index collection_address response_destination content new_owner_address query_id _47
+      s3 s4 XCHG
+      s7 s0 s0 XCHG3
+      PUSHNULL
+      1 PUSHINT	//  new_owner_address index collection_address content response_destination rest_amount _47 query_id _48 _49=1
+      send_msg INLINECALLDICT
+      s0 s3 XCHG	//  content index collection_address new_owner_address
+    }>ELSE<{
+      DROP
+      s2 POP
+      s4 POP	//  content index collection_address new_owner_address
+    }>
+    3 ROLL	//  index collection_address new_owner_address content
     store_data CALLDICT
   }>
   recv_internal PROC:<{
@@ -172,7 +152,7 @@ PROGRAM{
     IFJMP:<{	//  my_balance in_msg_body cs
       3 BLKDROP	// 
     }>	//  my_balance in_msg_body cs
-    LDMSGADDR	//  my_balance in_msg_body _54 _53
+    LDMSGADDR	//  my_balance in_msg_body _57 _56
     DROP	//  my_balance in_msg_body sender_address
     load_data CALLDICT	//  my_balance in_msg_body sender_address init? index collection_address owner_address content
     s0 s4 XCHG	//  my_balance in_msg_body sender_address content index collection_address owner_address init?
@@ -182,16 +162,13 @@ PROGRAM{
       s2 POP
       s4 POP	//  index in_msg_body sender_address collection_address
       s0 s1 PUXC	//  index in_msg_body collection_address collection_address sender_address
-      SDEQ	//  index in_msg_body collection_address _23
-      IFJMP:<{	//  index in_msg_body collection_address
-        SWAP	//  index collection_address in_msg_body
-        LDMSGADDR	//  index collection_address _24 in_msg_body
-        LDREF	//  index collection_address _24 _63 _62
-        DROP	//  index collection_address _24 _26
-        store_data CALLDICT
-      }>	//  index in_msg_body collection_address
-      3 BLKDROP	// 
-      405 THROW
+      SDEQ	//  index in_msg_body collection_address _24
+      405 THROWIFNOT
+      SWAP	//  index collection_address in_msg_body
+      LDMSGADDR	//  index collection_address _26 in_msg_body
+      LDREF	//  index collection_address _26 _66 _65
+      DROP	//  index collection_address _26 _28
+      store_data CALLDICT
     }>	//  my_balance in_msg_body sender_address content index collection_address owner_address
     s0 s5 XCHG	//  my_balance owner_address sender_address content index collection_address in_msg_body
     32 LDU	//  my_balance owner_address sender_address content index collection_address op in_msg_body
@@ -204,7 +181,7 @@ PROGRAM{
       s3 s6 XCHG
       4 2 REVERSE
       SWAP	//  my_balance index collection_address owner_address content sender_address query_id in_msg_body
-      transfer_ownership CALLDICT
+      transfer_ownership INLINECALLDICT
     }>	//  my_balance owner_address sender_address content index collection_address op query_id in_msg_body
     DROP
     s4 POP
@@ -214,15 +191,20 @@ PROGRAM{
     s1 s4 XCHG	//  collection_address index sender_address query_id op _42
     EQUAL	//  collection_address index sender_address query_id _43
     IFJMP:<{	//  collection_address index sender_address query_id
-      s0 s2 XCHG
-      NEWC	//  collection_address query_id sender_address index _44
-      64 STU	//  collection_address query_id sender_address _46
-      s0 s3 XCHG2	//  sender_address query_id _46 collection_address
-      STSLICER	//  sender_address query_id _47
-      send_static_data INLINECALLDICT
+      0 PUSHINT	//  collection_address index sender_address query_id _44=0
+      0x8b771735 PUSHINT	//  collection_address index sender_address query_id _44=0 _45
+      s0 s4 XCHG
+      NEWC	//  collection_address _45 sender_address query_id _44=0 index _46
+      64 STU	//  collection_address _45 sender_address query_id _44=0 _48
+      s0 s5 XCHG2	//  _44=0 _45 sender_address query_id _48 collection_address
+      STSLICER	//  _44=0 _45 sender_address query_id _49
+      s2 s4 XCHG
+      s2 s3 XCHG
+      64 PUSHINT	//  sender_address _44=0 _45 query_id _49 _50=64
+      send_msg INLINECALLDICT
     }>	//  collection_address index sender_address query_id
     4 BLKDROP	// 
-    16 PUSHPOW2DEC	//  _49=65535
+    16 PUSHPOW2DEC	//  _52=65535
     THROWANY
   }>
   get_nft_data PROC:<{
