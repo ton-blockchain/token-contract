@@ -55,12 +55,13 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
 }
 
 () transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body) impure inline {
-    slice new_owner_address = in_msg_body~load_msg_addr();
     throw_unless(401, equal_slices(sender_address, owner_address));
 
+    slice new_owner_address = in_msg_body~load_msg_addr();
     slice response_destination = in_msg_body~load_msg_addr();
     in_msg_body~load_int(1); ;; this nft don't use custom_payload
     int forward_amount = in_msg_body~load_coins();
+
     int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
     throw_unless(402, rest_amount > 0); ;; base nft spends fixed amount of gas, will not check for response
     var forward_payload = in_msg_body;

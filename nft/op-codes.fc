@@ -8,4 +8,4 @@ int op:report_royalty_params() asm "0xf0f8fe3c PUSHINT";
 
 ;; NFTEditable
 int op:edit() asm "0x53962656 PUSHINT";
-int op:editorship_assigned_notify() asm "0x511a4463 PUSHINT";
+int op:editorship_assigned() asm "0x511a4463 PUSHINT";
