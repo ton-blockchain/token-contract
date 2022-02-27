@@ -35,10 +35,10 @@ TON Wallet Chrome Extension 1.1.31+ required.
 
         const nftCollection = new NftCollection(tonweb.provider, {
             ownerAddress: walletAddress,
-            royalty: 0.13,
+            royalty: 0.05,
             royaltyAddress: walletAddress,
-            collectionContentUri: 'http://localhost:63342/token-contract/nft/web-example/my_collection.json',
-            nftItemContentBaseUri: 'http://localhost:63342/token-contract/nft/web-example/',
+            collectionContentUri: 'https://raw.githubusercontent.com/ton-blockchain/token-contract/main/nft/web-example/my_collection.json',
+            nftItemContentBaseUri: 'https://raw.githubusercontent.com/ton-blockchain/token-contract/main/nft/web-example/',
             nftItemCodeHex: NftItem.codeHex
         });
         const nftCollectionAddress = await nftCollection.getAddress();
@@ -52,7 +52,7 @@ TON Wallet Chrome Extension 1.1.31+ required.
             provider.send(
                 'ton_sendTransaction',
                 [{
-                    to: nftCollectionAddress.toString(true, true, false), // non-bounceable
+                    to: nftCollectionAddress.toString(true, true, true),
                     value: TonWeb.utils.toNano(0.05).toString(),
                     stateInit: stateInitBase64,
                     dataType: 'boc'
