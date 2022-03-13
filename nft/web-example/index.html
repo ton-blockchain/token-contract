@@ -7,7 +7,7 @@
 </head>
 <body>
 
-TON Wallet Chrome Extension 1.1.31+ required.
+TON Wallet Chrome Extension 1.1.34+ required.
 
 <button id="createCollectionButton">Create Collection</button>
 <button id="createNftButton">Create NFT</button>
@@ -17,18 +17,18 @@ TON Wallet Chrome Extension 1.1.31+ required.
 
     // BLOCKCHAIN
 
-    const provider = window.ton;
-
-    if (!provider) {
-        alert('TON Wallet Plugin not installed');
-        throw new Error('TON Wallet Plugin not installed');
-    }
-
     const {NftCollection, NftItem, NftMarketplace, NftSale} = TonWeb.token.nft;
 
     const tonweb = new TonWeb(new TonWeb.HttpProvider('https://toncenter.com/api/v2/jsonRPC', {apiKey: 'YOUR_API_KEY'}));
 
     const init = async () => {
+        if (!window.tonProtocolVersion || window.tonProtocolVersion < 1) {
+            alert('Please update your TON Wallet Extension');
+            return;
+        }
+
+        const provider = window.ton;
+
         const accounts = await provider.send('ton_requestWallets');
         const walletAddress = new TonWeb.utils.Address(accounts[0].address);
         console.log('wallet address=', walletAddress.toString(true, true, true));
@@ -125,7 +125,11 @@ TON Wallet Chrome Extension 1.1.31+ required.
         }
     }
 
-    init();
+    if (window.ton) {
+        init();
+    } else {
+        window.addEventListener('tonready', () => init(), false);
+    }
 </script>
 
 
