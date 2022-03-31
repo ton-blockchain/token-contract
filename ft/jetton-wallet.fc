@@ -97,7 +97,7 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
                      = InternalMsgBody;
 -}
 
-() receive_tokens (slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
+() receive_tokens (slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee) impure {
   ;; NOTE we can not allow fails in action phase since in that case there will be
   ;; no bounce. Thus check and throw in computation phase.
   (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
@@ -113,9 +113,9 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
   );
   int forward_ton_amount = in_msg_body~load_coins();
 
-  msg_value -= gas_consumption();
+  my_ton_balance -= (min_tons_for_storage() + gas_consumption());
   if(forward_ton_amount) {
-    msg_value -= forward_ton_amount + fwd_fee;
+    my_ton_balance -= (forward_ton_amount + fwd_fee);
     slice either_forward_payload = in_msg_body;
 
     var msg_body = begin_cell()
@@ -136,12 +136,12 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     send_raw_message(msg.end_cell(), 1);
   }
 
-  if ((response_address.preload_uint(2) != 0) & (msg_value > 0)) {
+  if ((response_address.preload_uint(2) != 0) & (my_ton_balance > 0)) {
     raw_reserve(min_tons_for_storage(), 2);
     var msg = begin_cell()
       .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
       .store_slice(response_address)
-      .store_coins(msg_value)
+      .store_coins(my_ton_balance)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
       .store_uint(op::excesses(), 32)
       .store_uint(query_id, 64);
@@ -222,7 +222,7 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
   }
 
   if (op == op::internal_transfer()) { ;; incoming transfer
-    receive_tokens(in_msg_body, sender_address, msg_value, fwd_fee);
+    receive_tokens(in_msg_body, sender_address, my_balance, fwd_fee);
     return ();
   }
 
