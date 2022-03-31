@@ -1,0 +1,36 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+
+"jetton-wallet.boc" file>B B>boc =: ft_code
+
+<{
+  SETCP0 ACCEPT
+  now PUSHINT
+  "jetton-minter.fif" include PUSHREF SETCODE
+}>s =: contract_code
+
+<b b> =: contract_storage
+
+0 =: wc
+
+<b b{00110} s, <b contract_code s, b> ref, contract_storage ref, b>
+dup =: state_init
+dup hashu wc swap 2constant contract_addr
+
+."Contract address = " contract_addr .addr cr
+
+contract_addr "wton.addr" save-address-verbose
+
+."Non-bounceable address (for init): " contract_addr 7 .Addr cr
+."Bounceable address (for later access): " contract_addr 6 .Addr cr
+
+
+<b b> =: init_message
+
+
+<b b{1000100} s, contract_addr addr, b{000010} s, state_init <s s, b{0} s, init_message <s s, b>
+2 boc+>B
+"wton-query.boc" tuck B>file
+."(Saved collection contract creating query to file " type .")" cr

@@ -1,6 +1,7 @@
 "Asm.fif" include
-// automatically generated from `stdlib.fc` `op-codes.fc` `nft-collection-editable.fc` 
+// automatically generated from `../stdlib.fc` `params.fc` `op-codes.fc` `nft-collection-editable.fc` 
 PROGRAM{
+  DECLPROC force_chain
   DECLPROC load_data
   DECLPROC save_data
   DECLPROC calculate_nft_item_state_init
@@ -12,6 +13,14 @@ PROGRAM{
   92067 DECLMETHOD get_nft_address_by_index
   85719 DECLMETHOD royalty_params
   68445 DECLMETHOD get_nft_content
+  force_chain PROC:<{
+    //  addr
+    REWRITESTDADDR	//  _8 _9
+    DROP	//  wc
+    0 PUSHINT	//  wc _5
+    EQUAL	//  _6
+    333 THROWIFNOT
+  }>
   load_data PROC:<{
     // 
     c4 PUSH	//  _1
@@ -55,12 +64,12 @@ PROGRAM{
     ENDC	//  _18
   }>
   calculate_nft_item_address PROC:<{
-    //  workchain state_init
-    HASHCU	//  workchain _2
-    4 PUSHINT	//  workchain _2 _3=4
-    NEWC	//  workchain _2 _3=4 _4
-    3 STU	//  workchain _2 _6
-    s1 s2 XCHG	//  _2 workchain _6
+    //  wc state_init
+    HASHCU	//  wc _2
+    4 PUSHINT	//  wc _2 _3=4
+    NEWC	//  wc _2 _3=4 _4
+    3 STU	//  wc _2 _6
+    s1 s2 XCHG	//  _2 wc _6
     8 STI	//  _2 _8
     256 STU	//  _10
     ENDC	//  _11
@@ -70,8 +79,8 @@ PROGRAM{
     //  item_index nft_item_code amount nft_content
     2SWAP	//  amount nft_content item_index nft_item_code
     calculate_nft_item_state_init CALLDICT	//  amount nft_content state_init
-    0 PUSHINT	//  amount nft_content state_init _7=0
-    OVER	//  amount nft_content state_init _7=0 state_init
+    0 PUSHINT	//  amount nft_content state_init _7
+    OVER	//  amount nft_content state_init _7 state_init
     calculate_nft_item_address CALLDICT	//  amount nft_content state_init nft_address
     7 PUSHINT	//  amount nft_content state_init nft_address _14
     24 PUSHINT	//  amount nft_content state_init nft_address _14 _15=24
@@ -130,129 +139,129 @@ PROGRAM{
     }>	//  in_msg_body cs
     LDMSGADDR	//  in_msg_body _105 _104
     DROP	//  in_msg_body sender_address
-    load_data INLINECALLDICT	//  in_msg_body sender_address owner_address next_item_index content nft_item_code royalty_params
-    s0 s6 XCHG	//  royalty_params sender_address owner_address next_item_index content nft_item_code in_msg_body
-    32 LDU	//  royalty_params sender_address owner_address next_item_index content nft_item_code op in_msg_body
-    64 LDU	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body
-    0x693d3950 PUSHINT	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body _28
-    s3 s(-1) PUXC	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body op _28
-    EQUAL	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body _29
-    IFJMP:<{	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body
-      s1 s6 XCHG
-      6 BLKDROP	//  royalty_params sender_address query_id
-      s0 s2 XCHG	//  query_id sender_address royalty_params
-      CTOS	//  query_id sender_address _30
-      s1 s2 XCHG	//  sender_address query_id _30
+    SWAP	//  sender_address in_msg_body
+    32 LDU	//  sender_address op in_msg_body
+    64 LDU	//  sender_address op query_id in_msg_body
+    load_data INLINECALLDICT	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params
+    0x693d3950 PUSHINT	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params _28
+    s8 s(-1) PUXC	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params op _28
+    EQUAL	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params _29
+    IFJMP:<{	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params
+      s7 POP
+      5 BLKDROP	//  sender_address royalty_params query_id
+      SWAP	//  sender_address query_id royalty_params
+      CTOS	//  sender_address query_id _30
       send_royalty_params INLINECALLDICT
-    }>	//  royalty_params sender_address owner_address next_item_index content nft_item_code op query_id in_msg_body
-    NIP	//  royalty_params sender_address owner_address next_item_index content nft_item_code op in_msg_body
-    s6 s5 XCPU	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op sender_address owner_address
-    SDEQ	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _33
+    }>	//  sender_address op query_id in_msg_body owner_address next_item_index content nft_item_code royalty_params
+    s6 POP	//  sender_address op royalty_params in_msg_body owner_address next_item_index content nft_item_code
+    s7 s3 XCPU	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content sender_address owner_address
+    SDEQ	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content _33
     401 THROWIFNOT
-    DUP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op op
-    1 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _36
-    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-      DROP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
-      s0 s4 XCHG	//  royalty_params nft_item_code owner_address next_item_index content in_msg_body
-      64 LDU	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body
-      s1 s3 PUSH2	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body item_index next_item_index
-      LEQ	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body _42
+    s5 PUSH	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content op
+    1 EQINT	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content _36
+    IFJMP:<{	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+      s5 POP	//  nft_item_code content royalty_params in_msg_body owner_address next_item_index
+      s0 s2 XCHG	//  nft_item_code content royalty_params next_item_index owner_address in_msg_body
+      64 LDU	//  nft_item_code content royalty_params next_item_index owner_address item_index in_msg_body
+      s1 s3 PUSH2	//  nft_item_code content royalty_params next_item_index owner_address item_index in_msg_body item_index next_item_index
+      LEQ	//  nft_item_code content royalty_params next_item_index owner_address item_index in_msg_body _42
       402 THROWIFNOT
-      s1 s3 PUSH2	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body item_index next_item_index
-      EQUAL	//  royalty_params nft_item_code owner_address next_item_index content item_index in_msg_body is_last
-      SWAP	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last in_msg_body
-      LDVARUINT16	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 in_msg_body
-      LDREF	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 _120 _119
-      DROP	//  royalty_params nft_item_code owner_address next_item_index content item_index is_last _46 _48
-      s7 PUSH
+      s1 s3 PUSH2	//  nft_item_code content royalty_params next_item_index owner_address item_index in_msg_body item_index next_item_index
+      EQUAL	//  nft_item_code content royalty_params next_item_index owner_address item_index in_msg_body is_last
+      SWAP	//  nft_item_code content royalty_params next_item_index owner_address item_index is_last in_msg_body
+      LDVARUINT16	//  nft_item_code content royalty_params next_item_index owner_address item_index is_last _46 in_msg_body
+      LDREF	//  nft_item_code content royalty_params next_item_index owner_address item_index is_last _46 _120 _119
+      DROP	//  nft_item_code content royalty_params next_item_index owner_address item_index is_last _46 _48
+      s8 PUSH
       s3 s4 XCHG
-      -ROT	//  royalty_params nft_item_code owner_address next_item_index content is_last item_index nft_item_code _46 _48
+      -ROT	//  nft_item_code content royalty_params next_item_index owner_address is_last item_index nft_item_code _46 _48
       deploy_nft_item CALLDICT
-      IF:<{	//  royalty_params nft_item_code owner_address next_item_index content
-        SWAP	//  royalty_params nft_item_code owner_address content next_item_index
-        INC	//  royalty_params nft_item_code owner_address content next_item_index
-        s4 s3 s3 XCHG3
-        s0 s2 XCHG	//  owner_address next_item_index content nft_item_code royalty_params
+      IF:<{	//  nft_item_code content royalty_params next_item_index owner_address
+        SWAP	//  nft_item_code content royalty_params owner_address next_item_index
+        INC	//  nft_item_code content royalty_params owner_address next_item_index
+        s3 s4 s3 XCHG3	//  owner_address next_item_index content nft_item_code royalty_params
         save_data INLINECALLDICT
       }>ELSE<{
         5 BLKDROP	// 
       }>
-    }>	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-    DUP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op op
-    2 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _55
-    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-      DROP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code
-      0 PUSHINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code counter=0
-      s0 s5 XCHG	//  royalty_params counter=0 owner_address next_item_index content nft_item_code in_msg_body
-      LDREF	//  royalty_params counter=0 owner_address next_item_index content nft_item_code _122 _121
-      DROP	//  royalty_params counter=0 owner_address next_item_index content nft_item_code deploy_list
+    }>	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+    s5 PUSH	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content op
+    2 EQINT	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content _55
+    IFJMP:<{	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+      s5 POP	//  nft_item_code content royalty_params in_msg_body owner_address next_item_index
+      0 PUSHINT	//  nft_item_code content royalty_params in_msg_body owner_address next_item_index counter=0
+      s0 s3 XCHG	//  nft_item_code content royalty_params counter=0 owner_address next_item_index in_msg_body
+      LDREF	//  nft_item_code content royalty_params counter=0 owner_address next_item_index _122 _121
+      DROP	//  nft_item_code content royalty_params counter=0 owner_address next_item_index deploy_list
       UNTIL:<{
-        64 PUSHINT	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list _65=64
+        64 PUSHINT	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list _65=64
         DICTUREMMIN
-        NULLSWAPIFNOT2	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list item item_index f?
-        DUP	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list item item_index f? f?
-        IF:<{	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list item item_index f?
-          s0 s8 XCHG	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
-          INC	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
+        NULLSWAPIFNOT2	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list item item_index f?
+        DUP	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list item item_index f? f?
+        IF:<{	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list item item_index f?
+          s0 s6 XCHG	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter
+          INC	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter
           DUP
-          250 PUSHINT	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter counter _69=250
-          GEQ	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _70
-          IF:<{	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
+          250 PUSHINT	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter counter _69=250
+          GEQ	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _70
+          IF:<{	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter
             399 THROW
-          }>	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter
-          403 PUSHINT	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=403
-          OVER	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _73=403 counter
-          ADD	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74
-          s2 s7 PUSH2	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74 item_index next_item_index
-          LEQ	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list item item_index counter _74 _75
+          }>	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter
+          403 PUSHINT	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _73=403
+          OVER	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _73=403 counter
+          ADD	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _74
+          s2 s5 PUSH2	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _74 item_index next_item_index
+          LEQ	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list item item_index counter _74 _75
           THROWANYIFNOT
-          s0 s2 XCHG	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index item
-          LDVARUINT16	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index _77 item
-          LDREF	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index _77 _133 _132
-          DROP	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index _77 _79
+          s0 s2 XCHG	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index item
+          LDVARUINT16	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index _77 item
+          LDREF	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index _77 _133 _132
+          DROP	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index _77 _79
           s2 PUSH
-          s6 s2 s(-1) PUXC2	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index item_index nft_item_code _77 _79
+          s11 s2 s(-1) PUXC2	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index item_index nft_item_code _77 _79
           deploy_nft_item CALLDICT
-          s5 PUSH	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter item_index next_item_index
-          EQUAL	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter _82
-          IF:<{	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter
-            s0 s4 XCHG	//  royalty_params f? owner_address counter content nft_item_code deploy_list next_item_index
-            INC	//  royalty_params f? owner_address counter content nft_item_code deploy_list next_item_index
-            s0 s4 XCHG	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter
-          }>	//  royalty_params f? owner_address next_item_index content nft_item_code deploy_list counter
-          s0 s6 XCHG	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list f?
+          s3 PUSH	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter item_index next_item_index
+          EQUAL	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter _82
+          IF:<{	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter
+            s0 s2 XCHG	//  nft_item_code content royalty_params f? owner_address counter deploy_list next_item_index
+            INC	//  nft_item_code content royalty_params f? owner_address counter deploy_list next_item_index
+            s0 s2 XCHG	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter
+          }>	//  nft_item_code content royalty_params f? owner_address next_item_index deploy_list counter
+          s0 s4 XCHG	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list f?
         }>ELSE<{
-          2 1 BLKDROP2	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list f?
+          2 1 BLKDROP2	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list f?
         }>
-        NOT	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list _85
-      }>	//  royalty_params counter owner_address next_item_index content nft_item_code deploy_list
+        NOT	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list _85
+      }>	//  nft_item_code content royalty_params counter owner_address next_item_index deploy_list
       DROP
-      s4 POP	//  royalty_params nft_item_code owner_address next_item_index content
-      s0 s3 s4 XCHG3	//  owner_address next_item_index content nft_item_code royalty_params
+      s2 POP	//  nft_item_code content royalty_params next_item_index owner_address
+      s4 s4 XCHG2
+      s3 s1 s3 XCHG3	//  owner_address next_item_index content nft_item_code royalty_params
       save_data INLINECALLDICT
-    }>	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-    DUP	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op op
-    3 EQINT	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op _88
-    IFJMP:<{	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-      DROP
-      s3 POP	//  royalty_params in_msg_body nft_item_code next_item_index content
-      s0 s3 XCHG	//  royalty_params content nft_item_code next_item_index in_msg_body
-      LDMSGADDR	//  royalty_params content nft_item_code next_item_index _135 _134
-      DROP	//  royalty_params content nft_item_code next_item_index new_owner
-      s3 s3 s4 XCHG3	//  new_owner next_item_index content nft_item_code royalty_params
+    }>	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+    s5 PUSH	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content op
+    3 EQINT	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content _88
+    IFJMP:<{	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+      s2 POP
+      s4 POP	//  nft_item_code next_item_index royalty_params in_msg_body content
+      SWAP	//  nft_item_code next_item_index royalty_params content in_msg_body
+      LDMSGADDR	//  nft_item_code next_item_index royalty_params content _135 _134
+      DROP	//  nft_item_code next_item_index royalty_params content new_owner
+      s1 s4 s4 XCHG3	//  new_owner next_item_index content nft_item_code royalty_params
       save_data INLINECALLDICT
-    }>	//  royalty_params in_msg_body owner_address next_item_index content nft_item_code op
-    s2 POP
-    s5 POP	//  nft_item_code in_msg_body owner_address next_item_index op
-    4 EQINT	//  nft_item_code in_msg_body owner_address next_item_index _94
-    IFJMP:<{	//  nft_item_code in_msg_body owner_address next_item_index
-      s0 s2 XCHG	//  nft_item_code next_item_index owner_address in_msg_body
-      LDREF	//  nft_item_code next_item_index owner_address _95 in_msg_body
-      LDREF	//  nft_item_code next_item_index owner_address _95 _139 _138
-      DROP	//  nft_item_code next_item_index owner_address _95 _97
-      s1 s4 s0 XCHG3	//  owner_address next_item_index _95 nft_item_code _97
+    }>	//  nft_item_code op royalty_params in_msg_body owner_address next_item_index content
+    DROP
+    s3 POP	//  nft_item_code op next_item_index in_msg_body owner_address
+    s0 s3 XCHG	//  nft_item_code owner_address next_item_index in_msg_body op
+    4 EQINT	//  nft_item_code owner_address next_item_index in_msg_body _94
+    IFJMP:<{	//  nft_item_code owner_address next_item_index in_msg_body
+      LDREF	//  nft_item_code owner_address next_item_index _95 in_msg_body
+      LDREF	//  nft_item_code owner_address next_item_index _95 _139 _138
+      DROP	//  nft_item_code owner_address next_item_index _95 _97
+      s3 s4 XCHG
+      s1 s3 s0 XCHG3	//  owner_address next_item_index _95 nft_item_code _97
       save_data INLINECALLDICT
-    }>	//  nft_item_code in_msg_body owner_address next_item_index
+    }>	//  nft_item_code owner_address next_item_index in_msg_body
     4 BLKDROP	// 
     16 PUSHPOW2DEC	//  _100=65535
     THROWANY

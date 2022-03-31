@@ -1,7 +1,5 @@
 ;; NFT marketplace smart contract
 
-int equal_slices (slice a, slice b) asm "SDEQ";
-
 ;; storage scheme
 ;; storage#_ owner_address:MsgAddress
 ;;           = Storage;

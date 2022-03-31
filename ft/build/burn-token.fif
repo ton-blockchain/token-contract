@@ -1,0 +1,10 @@
+"Asm.fif" include
+"TonUtil.fif" include
+<b 17 32 u, 0 64 u, 1000000000 Gram,
+"EQDkZIvi6fkgNVxLOgw5hzquGhxhUvhvJ4B836p-NQ-iLKCv" $>smca 2drop Addr,
+b>
+2 boc+>B
+
+"burn-token.boc" B>file
+
+

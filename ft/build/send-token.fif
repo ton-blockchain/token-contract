@@ -1,0 +1,10 @@
+"Asm.fif" include
+"TonUtil.fif" include
+<b 11 32 u, 0 64 u, 5 Gram,
+"Ef8E9kxq-_890Q2LpnB3kKyWcNVA83qUSLAze6pqWpKsrB5K" $>smca 2drop Addr,
+"EQDkZIvi6fkgNVxLOgw5hzquGhxhUvhvJ4B836p-NQ-iLKCv" $>smca 2drop Addr,
+0 1 u,
+1 Gram,
+0 1 u,
+b>
+

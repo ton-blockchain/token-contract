@@ -2,11 +2,19 @@
 ;;  TON NFT Item Smart Contract
 ;;
 
-int equal_slices (slice a, slice b) asm "SDEQ";
-int builder_null?(builder b) asm "ISNULL";
-builder store_builder(builder to, builder from) asm "STBR";
+{-
 
-int min_gas_for_storage() asm "50000000 PUSHINT";
+    NOTE that this tokens can be transferred within the same workchain.
+
+    This is suitable for most tokens, if you need tokens transferable between workchains there are two solutions:
+
+    1) use more expensive but universal function below to calculate message forward fee for arbitrary destination (see `misc/forward-fee-calc.cs`)
+
+    2) use token holder proxies in target workchain (that way even 'non-universal' token can be used from any workchain)
+
+-}
+
+int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 
 ;;
 ;;  Storage
@@ -54,22 +62,32 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
   send_raw_message(msg.end_cell(), send_mode);
 }
 
-() transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body) impure inline {
+() transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body, int fwd_fees) impure inline {
     throw_unless(401, equal_slices(sender_address, owner_address));
 
     slice new_owner_address = in_msg_body~load_msg_addr();
+    force_chain(new_owner_address);
     slice response_destination = in_msg_body~load_msg_addr();
     in_msg_body~load_int(1); ;; this nft don't use custom_payload
     int forward_amount = in_msg_body~load_coins();
 
-    int rest_amount = my_balance - min_gas_for_storage() - forward_amount;
-    throw_unless(402, rest_amount > 0); ;; base nft spends fixed amount of gas, will not check for response
+    int rest_amount = my_balance - min_tons_for_storage();
+    if (forward_amount) {
+      rest_amount -= (forward_amount + fwd_fees);
+    }
+    int need_response = response_destination.preload_uint(2) != 0; ;; if NOT addr_none: 00
+    if (need_response) {
+      rest_amount -= fwd_fees;
+    }
+
+    throw_unless(402, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
 
     if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, op:ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
+      send_msg(new_owner_address, forward_amount, op::ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
     }
-    if (response_destination.preload_uint(2) != 0) { ;; if NOT addr_none: 00
-      send_msg(response_destination, rest_amount, op:excesses(), query_id, null(), 1); ;; paying fees, revert on errors
+    if (need_response) {
+      force_chain(response_destination);
+      send_msg(response_destination, rest_amount, op::excesses(), query_id, null(), 1); ;; paying fees, revert on errors
     }
 
     store_data(index, collection_address, new_owner_address, content);
@@ -88,6 +106,13 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
     }
     slice sender_address = cs~load_msg_addr();
 
+    cs~load_msg_addr(); ;; skip dst
+    cs~load_coins(); ;; skip value
+    cs~skip_bits(1); ;; skip extracurrency collection
+    cs~load_coins(); ;; skip ihr_fee
+    int fwd_fee = cs~load_coins(); ;; we use message fwd_fee for estimation of forward_payload costs
+
+
     (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();
     if (~ init?) {
       throw_unless(405, equal_slices(collection_address, sender_address));
@@ -98,12 +123,12 @@ int min_gas_for_storage() asm "50000000 PUSHINT";
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    if (op == op:transfer()) {
-      transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body);
+    if (op == op::transfer()) {
+      transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body, fwd_fee);
       return ();
     }
-    if (op == op:get_static_data()) {
-      send_msg(sender_address, 0, op:report_static_data(), query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
+    if (op == op::get_static_data()) {
+      send_msg(sender_address, 0, op::report_static_data(), query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
       return ();
     }
     throw(0xffff);

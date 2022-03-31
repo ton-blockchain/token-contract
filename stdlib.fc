@@ -209,3 +209,8 @@ int set_seed() impure asm "SETRAND";
 
 builder store_coins(builder b, int x) asm "STVARUINT16";
 (slice, int) load_coins(slice s) asm( -> 1 0) "LDVARUINT16";
+
+int equal_slices (slice a, slice b) asm "SDEQ";
+int builder_null?(builder b) asm "ISNULL";
+builder store_builder(builder to, builder from) asm "STBR";
+
