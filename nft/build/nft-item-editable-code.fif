@@ -313,7 +313,7 @@ PROGRAM{
       64 PUSHINT	//  sender_address _59=0 _60 query_id _64 _65=64
       send_msg INLINECALLDICT
     }>	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body
-    124 PUSHINT	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body _67
+    0x1c04412a PUSHINT	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body _67
     s3 s(-1) PUXC	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body op _67
     EQUAL	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body _68
     IFJMP:<{	//  my_balance content sender_address fwd_fee editor_address index collection_address owner_address op query_id in_msg_body
@@ -329,7 +329,7 @@ PROGRAM{
     s6 POP
     s7 POP
     s7 POP	//  owner_address op sender_address in_msg_body editor_address index collection_address
-    123 PUSHINT	//  owner_address op sender_address in_msg_body editor_address index collection_address _70
+    0x1a0b9d51 PUSHINT	//  owner_address op sender_address in_msg_body editor_address index collection_address _70
     s1 s6 XCHG	//  owner_address collection_address sender_address in_msg_body editor_address index op _70
     EQUAL	//  owner_address collection_address sender_address in_msg_body editor_address index _71
     IFJMP:<{	//  owner_address collection_address sender_address in_msg_body editor_address index

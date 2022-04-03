@@ -268,8 +268,8 @@ PROGRAM{
     s1 s4 XCHG
     4 BLKDROP	//  index nft_item_code
     calculate_nft_item_state_init CALLDICT	//  state_init
-    0 PUSHINT	//  state_init _9=0
-    SWAP	//  _9=0 state_init
+    0 PUSHINT	//  state_init _9
+    SWAP	//  _9 state_init
     calculate_nft_item_address CALLDICT	//  _10
   }>
   royalty_params PROC:<{

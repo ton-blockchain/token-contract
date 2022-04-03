@@ -147,7 +147,7 @@ slice calculate_nft_item_address(int wc, cell state_init) {
 slice get_nft_address_by_index(int index) method_id {
     var (_, _, _, nft_item_code, _) = load_data();
     cell state_init = calculate_nft_item_state_init(index, nft_item_code);
-    return calculate_nft_item_address(0, state_init);
+    return calculate_nft_item_address(workchain(), state_init);
 }
 
 (int, int, slice) royalty_params() method_id {

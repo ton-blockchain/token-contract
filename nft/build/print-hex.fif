@@ -7,6 +7,11 @@
 "nft-collection-code.fif" include
 2 boc+>B dup Bx. cr
 
+."nft-collection-editable:" cr
+
+"nft-collection-editable-code.fif" include
+2 boc+>B dup Bx. cr
+
 ."nft:" cr
 
 "nft-item-code.fif" include
