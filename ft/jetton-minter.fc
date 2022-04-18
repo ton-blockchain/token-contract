@@ -87,6 +87,11 @@
         return ();
     }
 
+    if (op == 2) { ;; change content, delete this for immutable tokens
+        save_data(total_supply, admin_address, in_msg_body~load_ref(), jetton_wallet_code);
+        return ();
+    }
+
     throw(0xffff);
 }
 
