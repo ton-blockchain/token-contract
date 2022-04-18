@@ -75,11 +75,12 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     .end_cell();
 
   msg = msg.store_ref(msg_body);
+  int fwd_count = forward_ton_amount ? 2 : 1;
   throw_unless(709, msg_value >
                      forward_ton_amount +
                      ;; 3 messages: wal1->wal2,  wal2->owner, wal2->response
                      ;; but last one is optional (it is ok if it fails)
-                     2 * fwd_fee +
+                     fwd_count * fwd_fee +
                      (2 * gas_consumption() + min_tons_for_storage()));
                      ;; universal message send fee calculation may be activated here
                      ;; by using this instead of fwd_fee
@@ -97,7 +98,7 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
                      = InternalMsgBody;
 -}
 
-() receive_tokens (slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee) impure {
+() receive_tokens (slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee, int msg_value) impure {
   ;; NOTE we can not allow fails in action phase since in that case there will be
   ;; no bounce. Thus check and throw in computation phase.
   (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
@@ -113,9 +114,11 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
   );
   int forward_ton_amount = in_msg_body~load_coins();
 
-  my_ton_balance -= (min_tons_for_storage() + gas_consumption());
+  int ton_balance_before_msg = my_ton_balance - msg_value;
+  int storage_fee = min_tons_for_storage() - min(ton_balance_before_msg, min_tons_for_storage());
+  msg_value -= (storage_fee + gas_consumption());
   if(forward_ton_amount) {
-    my_ton_balance -= (forward_ton_amount + fwd_fee);
+    msg_value -= (forward_ton_amount + fwd_fee);
     slice either_forward_payload = in_msg_body;
 
     var msg_body = begin_cell()
@@ -136,12 +139,11 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     send_raw_message(msg.end_cell(), 1);
   }
 
-  if ((response_address.preload_uint(2) != 0) & (my_ton_balance > 0)) {
-    raw_reserve(min_tons_for_storage(), 2);
+  if ((response_address.preload_uint(2) != 0) & (msg_value > 0)) {
     var msg = begin_cell()
       .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
       .store_slice(response_address)
-      .store_coins(my_ton_balance)
+      .store_coins(msg_value)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
       .store_uint(op::excesses(), 32)
       .store_uint(query_id, 64);
@@ -222,7 +224,7 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
   }
 
   if (op == op::internal_transfer()) { ;; incoming transfer
-    receive_tokens(in_msg_body, sender_address, my_balance, fwd_fee);
+    receive_tokens(in_msg_body, sender_address, my_balance, fwd_fee, msg_value);
     return ();
   }
 
