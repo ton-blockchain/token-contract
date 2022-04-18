@@ -304,8 +304,8 @@ PROGRAM{
     STSLICER	//  jetton_wallet_code balance jetton_master_address owner_address _43
     ENDC	//  jetton_wallet_code balance jetton_master_address owner_address msg_body
     1 PUSHINT	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1
-    16 PUSHINT	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _47=16
-    NEWC	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _47=16 _48
+    24 PUSHINT	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _47=24
+    NEWC	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _47=24 _48
     6 STU	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _50
     s4 PUSH	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _50 jetton_master_address
     STSLICER	//  jetton_wallet_code balance jetton_master_address owner_address msg_body _46=1 _51
