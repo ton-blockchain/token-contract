@@ -87,7 +87,15 @@
         return ();
     }
 
-    if (op == 2) { ;; change content, delete this for immutable tokens
+    if (op == 3) { ;; change admin
+        throw_unless(73, equal_slices(sender_address, admin_address));
+        slice new_admin_address = in_msg_body~load_msg_addr();
+        save_data(total_supply, new_admin_address, content, jetton_wallet_code);
+        return ();
+    }
+
+    if (op == 4) { ;; change content, delete this for immutable tokens
+        throw_unless(73, equal_slices(sender_address, admin_address));
         save_data(total_supply, admin_address, in_msg_body~load_ref(), jetton_wallet_code);
         return ();
     }
