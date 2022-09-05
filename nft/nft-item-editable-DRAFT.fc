@@ -1,3 +1,6 @@
+#include "op-codes.fc";
+#include "params.fc";
+
 ;;
 ;;  TON NFT Item Smart Contract
 ;;
@@ -85,11 +88,11 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     throw_unless(402, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
 
     if (forward_amount) {
-      send_msg(new_owner_address, forward_amount, op::ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
+      send_msg(new_owner_address, forward_amount, op::ownership_assigned, query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
     }
     if (need_response) {
       force_chain(response_destination);
-      send_msg(response_destination, rest_amount, op::excesses(), query_id, null(), 1); ;; paying fees, revert on errors
+      send_msg(response_destination, rest_amount, op::excesses, query_id, null(), 1); ;; paying fees, revert on errors
     }
 
     store_data(index, collection_address, new_owner_address, content, editor_address);
@@ -116,11 +119,11 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     throw_unless(402, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
 
     if (forward_amount) {
-      send_msg(new_editor_address, forward_amount, op::editorship_assigned(), query_id, begin_cell().store_slice(editor_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
+      send_msg(new_editor_address, forward_amount, op::editorship_assigned, query_id, begin_cell().store_slice(editor_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
     }
     if (need_response) {
       force_chain(response_destination);
-      send_msg(response_destination, rest_amount, op::excesses(), query_id, null(), 1); ;; paying fees, revert on errors
+      send_msg(response_destination, rest_amount, op::excesses, query_id, null(), 1); ;; paying fees, revert on errors
     }
 
     store_data(index, collection_address, owner_address, content, new_editor_address);
@@ -155,19 +158,19 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    if (op == op::transfer()) {
+    if (op == op::transfer) {
       transfer_ownership(my_balance, index, collection_address, owner_address, content, editor_address, sender_address, query_id, in_msg_body, fwd_fee);
       return ();
     }
-    if (op == op::get_static_data()) {
-      send_msg(sender_address, 0, op::report_static_data(), query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
+    elseif (op == op::get_static_data) {
+      send_msg(sender_address, 0, op::report_static_data, query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
       return ();
     }
-    if (op == op::transfer_editorship()) {
+    elseif (op == op::transfer_editorship) {
       transfer_editorship(my_balance, index, collection_address, owner_address, content, editor_address, sender_address, query_id, in_msg_body, fwd_fee);
       return ();
     }
-    if (op == op::edit_content()) {
+    elseif (op == op::edit_content) {
       throw_unless(410, equal_slices(sender_address, editor_address));
       store_data(index, collection_address, owner_address, in_msg_body~load_ref(), editor_address);
       return ();
