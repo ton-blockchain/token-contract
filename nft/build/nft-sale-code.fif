@@ -1,0 +1,261 @@
+"Asm.fif" include
+// automatically generated from `../stdlib.fc` `op-codes.fc` `nft-sale.fc` 
+PROGRAM{
+  DECLPROC load_data
+  DECLPROC load_fees
+  DECLPROC save_data
+  DECLPROC buy
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  72748 DECLMETHOD get_sale_data
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    LDMSGADDR	//  _3 ds
+    LDMSGADDR	//  _3 _5 ds
+    LDMSGADDR	//  _3 _5 _7 ds
+    LDVARUINT16	//  _3 _5 _7 _9 ds
+    LDREF	//  _3 _5 _7 _9 _22 _21
+    DROP	//  _3 _5 _7 _9 _11
+  }>
+  load_fees PROC:<{
+    //  fees_cell
+    CTOS	//  ds
+    LDVARUINT16	//  _3 ds
+    LDMSGADDR	//  _3 _5 ds
+    LDVARUINT16	//  _3 _5 _14 _13
+    DROP	//  _3 _5 _7
+  }>
+  save_data PROC:<{
+    //  marketplace_address nft_address nft_owner_address full_price fees_cell
+    NEWC	//  marketplace_address nft_address nft_owner_address full_price fees_cell _5
+    s0 s5 XCHG2	//  fees_cell nft_address nft_owner_address full_price _5 marketplace_address
+    STSLICER	//  fees_cell nft_address nft_owner_address full_price _6
+    s0 s3 XCHG2	//  fees_cell full_price nft_owner_address _6 nft_address
+    STSLICER	//  fees_cell full_price nft_owner_address _7
+    SWAP	//  fees_cell full_price _7 nft_owner_address
+    STSLICER	//  fees_cell full_price _8
+    SWAP	//  fees_cell _8 full_price
+    STVARUINT16	//  fees_cell _9
+    STREF	//  _10
+    ENDC	//  _11
+    c4 POP
+  }>
+  buy PROC:<{
+    //  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id
+    1000000000 PUSHINT	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id _10
+    s5 s(-1) PUXC	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id full_price _10
+    ADD	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id _11
+    s3 s(-1) PUXC	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id msg_value _11
+    GEQ	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id _12
+    450 THROWIFNOT
+    s0 s3 XCHG	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address fees_cell
+    load_fees INLINECALLDICT	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount
+    0 PUSHINT	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _19=0
+    16 PUSHINT	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _19=0 _20=16
+    NEWC	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _19=0 _20=16 _21
+    6 STU	//  my_balance marketplace_address nft_address nft_owner_address full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _19=0 _23
+    s0 s9 XCHG2	//  my_balance marketplace_address nft_address _19=0 full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _23 nft_owner_address
+    STSLICER	//  my_balance marketplace_address nft_address _19=0 full_price query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _24
+    s7 s3 XCPU	//  my_balance marketplace_address nft_address _19=0 _24 query_id msg_value sender_address marketplace_fee royalty_address royalty_amount full_price marketplace_fee
+    SUB	//  my_balance marketplace_address nft_address _19=0 _24 query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _25
+    OVER	//  my_balance marketplace_address nft_address _19=0 _24 query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _25 royalty_amount
+    SUB	//  my_balance marketplace_address nft_address _19=0 _24 query_id msg_value sender_address marketplace_fee royalty_address royalty_amount _26
+    s11 s5 XCHG2	//  royalty_amount marketplace_address nft_address _19=0 _24 query_id _26 sender_address marketplace_fee royalty_address my_balance msg_value
+    SUB	//  royalty_amount marketplace_address nft_address _19=0 _24 query_id _26 sender_address marketplace_fee royalty_address _27
+    s1 s4 XCHG	//  royalty_amount marketplace_address nft_address _19=0 _24 query_id royalty_address sender_address marketplace_fee _26 _27
+    ADD	//  royalty_amount marketplace_address nft_address _19=0 _24 query_id royalty_address sender_address marketplace_fee _28
+    s1 s5 XCHG	//  royalty_amount marketplace_address nft_address _19=0 marketplace_fee query_id royalty_address sender_address _24 _28
+    STVARUINT16	//  royalty_amount marketplace_address nft_address _19=0 marketplace_fee query_id royalty_address sender_address _29
+    s1 s5 XCHG	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _19=0 _29
+    107 STU	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address owner_msg
+    ENDC	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _44
+    1 PUSHINT	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _44 _45=1
+    SENDRAWMSG
+    0 PUSHINT	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _48=0
+    16 PUSHINT	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _48=0 _49=16
+    NEWC	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _48=0 _49=16 _50
+    6 STU	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id royalty_address _48=0 _52
+    ROT	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id _48=0 _52 royalty_address
+    STSLICER	//  royalty_amount marketplace_address nft_address sender_address marketplace_fee query_id _48=0 _53
+    s0 s7 XCHG2	//  _48=0 marketplace_address nft_address sender_address marketplace_fee query_id _53 royalty_amount
+    STVARUINT16	//  _48=0 marketplace_address nft_address sender_address marketplace_fee query_id _54
+    s1 s6 XCHG	//  query_id marketplace_address nft_address sender_address marketplace_fee _48=0 _54
+    107 STU	//  query_id marketplace_address nft_address sender_address marketplace_fee royalty_msg
+    ENDC	//  query_id marketplace_address nft_address sender_address marketplace_fee _69
+    1 PUSHINT	//  query_id marketplace_address nft_address sender_address marketplace_fee _69 _70=1
+    SENDRAWMSG
+    0 PUSHINT	//  query_id marketplace_address nft_address sender_address marketplace_fee _73=0
+    16 PUSHINT	//  query_id marketplace_address nft_address sender_address marketplace_fee _73=0 _74=16
+    NEWC	//  query_id marketplace_address nft_address sender_address marketplace_fee _73=0 _74=16 _75
+    6 STU	//  query_id marketplace_address nft_address sender_address marketplace_fee _73=0 _77
+    s0 s5 XCHG2	//  query_id _73=0 nft_address sender_address marketplace_fee _77 marketplace_address
+    STSLICER	//  query_id _73=0 nft_address sender_address marketplace_fee _78
+    SWAP	//  query_id _73=0 nft_address sender_address _78 marketplace_fee
+    STVARUINT16	//  query_id _73=0 nft_address sender_address _79
+    s1 s3 XCHG	//  query_id sender_address nft_address _73=0 _79
+    107 STU	//  query_id sender_address nft_address marketplace_msg
+    ENDC	//  query_id sender_address nft_address _94
+    1 PUSHINT	//  query_id sender_address nft_address _94 _95=1
+    SENDRAWMSG
+    0 PUSHINT	//  query_id sender_address nft_address _98=0
+    DUP	//  query_id sender_address nft_address _98=0 _99=0
+    0x5fcc3d14 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100
+    OVER	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0
+    24 PUSHINT	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _102=24
+    NEWC	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _102=24 _103
+    6 STU	//  query_id sender_address nft_address _98=0 _99=0 _100 _101=0 _105
+    s0 s5 XCHG2	//  query_id sender_address _101=0 _98=0 _99=0 _100 _105 nft_address
+    STSLICER	//  query_id sender_address _101=0 _98=0 _99=0 _100 _106
+    s2 PUSH	//  query_id sender_address _101=0 _98=0 _99=0 _100 _106 _107=0
+    STVARUINT16	//  query_id sender_address _101=0 _98=0 _99=0 _100 _108
+    s1 s4 XCHG	//  query_id sender_address _100 _98=0 _99=0 _101=0 _108
+    107 STU	//  query_id sender_address _100 _98=0 _99=0 _122
+    s1 s3 XCHG	//  query_id sender_address _99=0 _98=0 _100 _122
+    32 STU	//  query_id sender_address _99=0 _98=0 _124
+    s1 s4 XCHG	//  _98=0 sender_address _99=0 query_id _124
+    64 STU	//  _98=0 sender_address _99=0 _126
+    s2 PUSH	//  _98=0 sender_address _99=0 _126 sender_address
+    STSLICER	//  _98=0 sender_address _99=0 _127
+    ROT	//  _98=0 _99=0 _127 sender_address
+    STSLICER	//  _98=0 _99=0 _128
+    1 STI	//  _98=0 _130
+    OVER	//  _98=0 _130 _131=0
+    STVARUINT16	//  _98=0 _132
+    1 STI	//  nft_msg
+    ENDC	//  _135
+    160 PUSHINT	//  _135 _138
+    SENDRAWMSG
+  }>
+  recv_internal PROC:<{
+    //  my_balance msg_value in_msg_full in_msg_body
+    SWAP	//  my_balance msg_value in_msg_body in_msg_full
+    CTOS	//  my_balance msg_value in_msg_body cs
+    4 LDU	//  my_balance msg_value in_msg_body flags cs
+    SWAP
+    1 PUSHINT	//  my_balance msg_value in_msg_body cs flags _10=1
+    AND	//  my_balance msg_value in_msg_body cs _11
+    IFJMP:<{	//  my_balance msg_value in_msg_body cs
+      4 BLKDROP	// 
+    }>	//  my_balance msg_value in_msg_body cs
+    LDMSGADDR	//  my_balance msg_value in_msg_body _121 _120
+    DROP	//  my_balance msg_value in_msg_body sender_address
+    load_data INLINECALLDICT	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell
+    s2 PUSH	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell nft_owner_address
+    SBITS	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell _22
+    2 GTINT	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell is_initialized
+    NOT	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell _25
+    IFJMP:<{	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell
+      s2 POP
+      s6 POP
+      s6 POP	//  fees_cell full_price in_msg_body sender_address marketplace_address nft_address
+      s2 s1 PUSH2	//  fees_cell full_price in_msg_body sender_address marketplace_address nft_address sender_address marketplace_address
+      SDEQ	//  fees_cell full_price in_msg_body sender_address marketplace_address nft_address _26
+      IFJMP:<{	//  fees_cell full_price in_msg_body sender_address marketplace_address nft_address
+        6 BLKDROP	// 
+      }>	//  fees_cell full_price in_msg_body sender_address marketplace_address nft_address
+      s2 s2 XCPU	//  fees_cell full_price in_msg_body nft_address marketplace_address sender_address nft_address
+      SDEQ	//  fees_cell full_price in_msg_body nft_address marketplace_address _28
+      500 THROWIFNOT
+      s0 s2 XCHG	//  fees_cell full_price marketplace_address nft_address in_msg_body
+      32 LDU	//  fees_cell full_price marketplace_address nft_address op in_msg_body
+      0x05138d91 PUSHINT	//  fees_cell full_price marketplace_address nft_address op in_msg_body _35
+      s1 s2 XCHG	//  fees_cell full_price marketplace_address nft_address in_msg_body op _35
+      EQUAL	//  fees_cell full_price marketplace_address nft_address in_msg_body _36
+      501 THROWIFNOT
+      64 LDU	//  fees_cell full_price marketplace_address nft_address _130 _129
+      NIP	//  fees_cell full_price marketplace_address nft_address in_msg_body
+      LDMSGADDR	//  fees_cell full_price marketplace_address nft_address _132 _131
+      DROP	//  fees_cell full_price marketplace_address nft_address prev_owner_address
+      s0 s3 s4 XCHG3	//  marketplace_address nft_address prev_owner_address full_price fees_cell
+      save_data INLINECALLDICT
+    }>	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell
+    s6 PUSH	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell in_msg_body
+    SEMPTY	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell _46
+    IFJMP:<{	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell
+      s6 POP	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price
+      s3 s6 XCHG
+      s5 s3 s3 XCHG3
+      s0 s4 XCHG
+      0 PUSHINT	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address _47=0
+      buy CALLDICT
+    }>	//  my_balance msg_value in_msg_body sender_address marketplace_address nft_address nft_owner_address full_price fees_cell
+    s0 s6 XCHG	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price in_msg_body
+    32 LDU	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op in_msg_body
+    64 LDU	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op _136 _135
+    DROP	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id
+    OVER	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id op
+    1 EQINT	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id _58
+    IFJMP:<{	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id
+      10 BLKDROP	// 
+    }>	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id
+    OVER	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id op
+    2 EQINT	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id _60
+    IFJMP:<{	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id
+      NIP	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price query_id
+      s4 s7 XCHG
+      s3 s6 XCHG
+      s5 s4 s0 XCHG3
+      s1 s2 XCHG	//  my_balance marketplace_address nft_address nft_owner_address full_price fees_cell msg_value sender_address query_id
+      buy CALLDICT
+    }>	//  my_balance msg_value fees_cell sender_address marketplace_address nft_address nft_owner_address full_price op query_id
+    s2 POP
+    s6 POP
+    s7 POP	//  query_id msg_value op sender_address marketplace_address nft_address nft_owner_address
+    s0 s4 XCHG	//  query_id msg_value nft_owner_address sender_address marketplace_address nft_address op
+    3 EQINT	//  query_id msg_value nft_owner_address sender_address marketplace_address nft_address _63
+    IFJMP:<{	//  query_id msg_value nft_owner_address sender_address marketplace_address nft_address
+      1000000000 PUSHINT	//  query_id msg_value nft_owner_address sender_address marketplace_address nft_address _65
+      s1 s5 XCHG	//  query_id nft_address nft_owner_address sender_address marketplace_address msg_value _65
+      GEQ	//  query_id nft_address nft_owner_address sender_address marketplace_address _66
+      457 THROWIFNOT
+      s1 s2 PUSH2	//  query_id nft_address nft_owner_address sender_address marketplace_address sender_address nft_owner_address
+      SDEQ	//  query_id nft_address nft_owner_address sender_address marketplace_address _69
+      -ROT	//  query_id nft_address nft_owner_address _69 sender_address marketplace_address
+      SDEQ	//  query_id nft_address nft_owner_address _69 _70
+      OR	//  query_id nft_address nft_owner_address _71
+      458 THROWIFNOT
+      0 PUSHINT	//  query_id nft_address nft_owner_address _74=0
+      DUP	//  query_id nft_address nft_owner_address _74=0 _75=0
+      0x5fcc3d14 PUSHINT	//  query_id nft_address nft_owner_address _74=0 _75=0 _76
+      OVER	//  query_id nft_address nft_owner_address _74=0 _75=0 _76 _77=0
+      16 PUSHINT	//  query_id nft_address nft_owner_address _74=0 _75=0 _76 _77=0 _78=16
+      NEWC	//  query_id nft_address nft_owner_address _74=0 _75=0 _76 _77=0 _78=16 _79
+      6 STU	//  query_id nft_address nft_owner_address _74=0 _75=0 _76 _77=0 _81
+      s0 s6 XCHG2	//  query_id _77=0 nft_owner_address _74=0 _75=0 _76 _81 nft_address
+      STSLICER	//  query_id _77=0 nft_owner_address _74=0 _75=0 _76 _82
+      s2 PUSH	//  query_id _77=0 nft_owner_address _74=0 _75=0 _76 _82 _83=0
+      STVARUINT16	//  query_id _77=0 nft_owner_address _74=0 _75=0 _76 _84
+      s1 s5 XCHG	//  query_id _76 nft_owner_address _74=0 _75=0 _77=0 _84
+      107 STU	//  query_id _76 nft_owner_address _74=0 _75=0 _98
+      s1 s4 XCHG	//  query_id _75=0 nft_owner_address _74=0 _76 _98
+      32 STU	//  query_id _75=0 nft_owner_address _74=0 _100
+      s1 s4 XCHG	//  _74=0 _75=0 nft_owner_address query_id _100
+      64 STU	//  _74=0 _75=0 nft_owner_address _102
+      OVER	//  _74=0 _75=0 nft_owner_address _102 nft_owner_address
+      STSLICER	//  _74=0 _75=0 nft_owner_address _103
+      SWAP	//  _74=0 _75=0 _103 nft_owner_address
+      STSLICER	//  _74=0 _75=0 _104
+      1 STI	//  _74=0 _106
+      OVER	//  _74=0 _106 _107=0
+      STVARUINT16	//  _74=0 _108
+      1 STI	//  msg
+      ENDC	//  _111
+      160 PUSHINT	//  _111 _114
+      SENDRAWMSG
+    }>	//  query_id msg_value nft_owner_address sender_address marketplace_address nft_address
+    6 BLKDROP	// 
+    16 PUSHPOW2DEC	//  _116=65535
+    THROWANY
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  get_sale_data PROC:<{
+    // 
+    load_data INLINECALLDICT	//  marketplace_address nft_address nft_owner_address full_price fees_cell
+    load_fees INLINECALLDICT	//  marketplace_address nft_address nft_owner_address full_price marketplace_fee royalty_address royalty_amount
+  }>
+}END>c

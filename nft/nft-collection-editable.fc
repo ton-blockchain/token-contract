@@ -73,7 +73,7 @@ slice calculate_nft_item_address(int wc, cell state_init) {
     }
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
-    
+
     if (flags & 1) { ;; ignore all bounced messages
         return ();
     }
@@ -90,8 +90,8 @@ slice calculate_nft_item_address(int wc, cell state_init) {
     }
 
     throw_unless(401, equal_slices(sender_address, owner_address));
-    
-  
+
+
     if (op == 1) { ;; deploy new nft
       int item_index = in_msg_body~load_uint(64);
       throw_unless(402, item_index <= next_item_index);
@@ -127,6 +127,10 @@ slice calculate_nft_item_address(int wc, cell state_init) {
     if (op == 3) { ;; change owner
       slice new_owner = in_msg_body~load_msg_addr();
       save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
+      return ();
+    }
+    if (op == 4) { ;; change content
+      save_data(owner_address, next_item_index, in_msg_body~load_ref(), nft_item_code, in_msg_body~load_ref());
       return ();
     }
     throw(0xffff);

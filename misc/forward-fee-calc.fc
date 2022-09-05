@@ -1,0 +1,23 @@
+{-
+Forward fee calculation supporting different workchains
+-}
+
+;; See crypto/block/transaction.cpp:L1499
+int msg_fwd_fee(slice destination, cell message_body, cell init_state, int max_viewed_cells) inline {
+    (int wc, _) = parse_std_addr(destination);
+    throw_unless(107, (workchain == -1) | (workchain == 0) );
+    int config_index = 25 + workchain;
+    slice cfg = config_param(config_index).begin_parse().skip_bits(8);
+    int lump_price = cfg~load_uint(64);
+    int bit_price = cfg~load_uint(64);
+    int cell_price = cfg~load_uint(64);
+    (int cells, int bits, _) = compute_data_size(message_body, max_viewed_cells);
+    cells -= 1;
+    bits -= message_body.slice_bits();
+
+    (int is_cells, int is_bits, _) = compute_data_size(init_state, max_viewed_cells);
+    is_cells -= 1;
+    is_bits -= init_state.slice_bits();
+    return lump_price + (((bits + is_bits) * bit_price + (cells + is_cells) * cell_price + 65535) >> 16 );
+}
+

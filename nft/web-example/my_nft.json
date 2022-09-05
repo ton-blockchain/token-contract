@@ -30,6 +30,6 @@
   ],
   "description" : "Friendly Marketplace Creature that enjoys long swims in the ocean.",
   "external_url" : "https://example.com/?token_id=2",
-  "image" : "https://storage.googleapis.com/matketplace-prod.appspot.com/creature/2.png",
+  "image" : "https://ton.org/img/img_1.svg",
   "name" : "Boris McCoy"
 }
