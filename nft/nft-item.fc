@@ -48,7 +48,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 
 () send_msg(slice to_address, int amount, int op, int query_id, builder payload, int send_mode) impure inline {
   var msg = begin_cell()
-    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 010000
     .store_slice(to_address)
     .store_coins(amount)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
