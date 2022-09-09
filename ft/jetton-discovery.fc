@@ -1,6 +1,8 @@
 ;; Jettons discovery smart contract for the non-discoverable Jettons
 
-int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
+;; 6098(computational_gas_price) * 1000(cur_gas_price) = 6098000
+;; ceil(6098000) = 10000000 ~= 0.01 TON
+int report_address_gas_consumption() asm "10000000 PUSHINT";
 
 ;; storage scheme
 ;; storage#_ jetton_minter_address:MsgAddress jetton_wallet_code:^Cell = Storage;
@@ -38,7 +40,7 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     (slice jetton_minter_address, cell jetton_wallet_code) = load_data();
 
     if (op == op::get_wallet_address()) {
-        throw_unless(75, msg_value > fwd_fee + gas_consumption());
+        throw_unless(75, msg_value > fwd_fee + report_address_gas_consumption());
 
         slice owner_address = in_msg_body~load_msg_addr();
         int include_address? = in_msg_body~load_uint(1);
