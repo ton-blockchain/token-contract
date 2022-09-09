@@ -1,4 +1,4 @@
-;; moved to another file to keep hex of the previous codes unchanged
+;; moved to the separate file to keep hex of the previous codes unchanged
 
 int op::get_wallet_address() asm "0x418cbb4e PUSHINT";
 int op::report_wallet_address() asm "0xad30f94a PUSHINT";
