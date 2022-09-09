@@ -113,7 +113,9 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
         slice owner_address = in_msg_body~load_msg_addr();
         int include_address? = in_msg_body~load_uint(1);
 
-        slice jetton_wallet_address = calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code);
+        cell included_address = include_address?
+                ? begin_cell().store_slice(owner_address).end_cell()
+                : null();
 
         var msg = begin_cell()
                 .store_uint(0x18, 6)
@@ -121,10 +123,15 @@ int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
                 .store_coins(0)
                 .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                 .store_uint(op::report_wallet_address(), 32)
-                .store_uint(query_id, 64)
-                .store_slice(jetton_wallet_address)
-                .store_maybe_ref(include_address? ? owner_address : null());
-        send_raw_message(msg.end_cell(), 64);
+                .store_uint(query_id, 64);
+
+        if (can_be_resolved?(owner_address)) {
+            msg = msg.store_slice(calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code));
+        } else {
+            msg = msg.store_uint(0, 2); ;; addr_none
+        }
+        send_raw_message(msg.store_maybe_ref(included_address).end_cell(), 64);
+        return ();
     }
 
     throw(0xffff);

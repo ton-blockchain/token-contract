@@ -17,3 +17,15 @@
 
 "jetton-minter-ICO.fif" include
 2 boc+>B dup Bx. cr
+
+
+."jetton-minter-discoverable:" cr
+
+"jetton-minter-discoverable.fif" include
+2 boc+>B dup Bx. cr
+
+
+."jetton-discovery:" cr
+
+"jetton-discovery.fif" include
+2 boc+>B dup Bx. cr
