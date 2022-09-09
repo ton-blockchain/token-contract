@@ -1,0 +1,69 @@
+;; Jettons discovery smart contract for the non-discoverable Jettons
+
+int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
+
+;; storage scheme
+;; storage#_ jetton_minter_address:MsgAddress jetton_wallet_code:^Cell = Storage;
+
+(slice, cell) load_data() inline {
+    slice ds = get_data().begin_parse();
+    return (
+            ds~load_msg_addr(), ;; jetton_minter_address
+            ds~load_ref() ;; jetton_wallet_code
+    );
+}
+
+() save_data(slice jetton_minter_address, cell jetton_wallet_code) impure inline {
+    set_data(begin_cell()
+            .store_slice(jetton_minter_address)
+            .store_ref(jetton_wallet_code)
+            .end_cell()
+    );
+}
+
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+
+    if (flags & 1) { ;; ignore all bounced messages
+        return ();
+    }
+
+    slice sender_address = cs~load_msg_addr();
+    cs~load_msg_addr(); ;; skip dst
+    cs~load_coins(); ;; skip value
+    cs~skip_bits(1); ;; skip extracurrency collection
+    cs~load_coins(); ;; skip ihr_fee
+    int fwd_fee = cs~load_coins(); ;; we use message fwd_fee for estimation of report_wallet_address cost
+
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    (slice jetton_minter_address, cell jetton_wallet_code) = load_data();
+
+    if (op == op::get_wallet_address()) {
+        throw_unless(75, msg_value > fwd_fee + gas_consumption());
+
+        slice owner_address = in_msg_body~load_msg_addr();
+        int include_address? = in_msg_body~load_uint(1);
+
+        slice jetton_wallet_address = calculate_user_jetton_wallet_address(owner_address, jetton_minter_address, jetton_wallet_code);
+
+        var msg = begin_cell()
+                .store_uint(0x18, 6)
+                .store_slice(sender_address)
+                .store_coins(0)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .store_uint(op::report_wallet_address(), 32)
+                .store_uint(query_id, 64)
+                .store_slice(jetton_wallet_address)
+                .store_maybe_ref(include_address? ? owner_address : null());
+        send_raw_message(msg.end_cell(), 64);
+    }
+
+    throw(0xffff);
+}
