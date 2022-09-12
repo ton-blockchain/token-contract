@@ -127,7 +127,7 @@ int report_address_gas_consumption() asm "10000000 PUSHINT";
                 .store_uint(op::report_wallet_address(), 32)
                 .store_uint(query_id, 64);
 
-        if (can_be_resolved?(owner_address)) {
+        if (is_resolvable?(owner_address)) {
             msg = msg.store_slice(calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code));
         } else {
             msg = msg.store_uint(0, 2); ;; addr_none

@@ -37,10 +37,10 @@ int report_address_gas_consumption() asm "10000000 PUSHINT";
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    (slice jetton_minter_address, cell jetton_wallet_code) = load_data();
-
     if (op == op::get_wallet_address()) {
         throw_unless(75, msg_value > fwd_fee + report_address_gas_consumption());
+
+        (slice jetton_minter_address, cell jetton_wallet_code) = load_data();
 
         slice owner_address = in_msg_body~load_msg_addr();
         int include_address? = in_msg_body~load_uint(1);
@@ -57,7 +57,7 @@ int report_address_gas_consumption() asm "10000000 PUSHINT";
                 .store_uint(op::report_wallet_address(), 32)
                 .store_uint(query_id, 64);
 
-        if (can_be_resolved?(owner_address)) {
+        if (is_resolvable?(owner_address)) {
             msg = msg.store_slice(calculate_user_jetton_wallet_address(owner_address, jetton_minter_address, jetton_wallet_code));
         } else {
             msg = msg.store_uint(0, 2); ;; addr_none

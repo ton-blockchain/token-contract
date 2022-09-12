@@ -3,7 +3,7 @@
 int op::get_wallet_address() asm "0x418cbb4e PUSHINT";
 int op::report_wallet_address() asm "0xad30f94a PUSHINT";
 
-int can_be_resolved?(slice addr) inline {
+int is_resolvable?(slice addr) inline {
     (int wc, _) = parse_std_addr(addr);
 
     return wc == workchain();
