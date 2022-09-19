@@ -2,7 +2,7 @@
 
 ;; 6098(computational_gas_price) * 1000(cur_gas_price) = 6098000
 ;; ceil(6098000) = 10000000 ~= 0.01 TON
-int report_address_gas_consumption() asm "10000000 PUSHINT";
+int provide_address_gas_consumption() asm "10000000 PUSHINT";
 
 ;; storage scheme
 ;; storage#_ jetton_minter_address:MsgAddress jetton_wallet_code:^Cell = Storage;
@@ -32,13 +32,13 @@ int report_address_gas_consumption() asm "10000000 PUSHINT";
     cs~load_coins(); ;; skip value
     cs~skip_bits(1); ;; skip extracurrency collection
     cs~load_coins(); ;; skip ihr_fee
-    int fwd_fee = cs~load_coins(); ;; we use message fwd_fee for estimation of report_wallet_address cost
+    int fwd_fee = cs~load_coins(); ;; we use message fwd_fee for estimation of take_wallet_address cost
 
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    if (op == op::get_wallet_address()) {
-        throw_unless(75, msg_value > fwd_fee + report_address_gas_consumption());
+    if (op == op::provide_wallet_address()) {
+        throw_unless(75, msg_value > fwd_fee + provide_address_gas_consumption());
 
         (slice jetton_minter_address, cell jetton_wallet_code) = load_data();
 
@@ -54,7 +54,7 @@ int report_address_gas_consumption() asm "10000000 PUSHINT";
                 .store_slice(sender_address)
                 .store_coins(0)
                 .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                .store_uint(op::report_wallet_address(), 32)
+                .store_uint(op::take_wallet_address(), 32)
                 .store_uint(query_id, 64);
 
         if (is_resolvable?(owner_address)) {
