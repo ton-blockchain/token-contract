@@ -1,3 +1,6 @@
+;; It is recommended to use https://github.com/ton-blockchain/token-contract/blob/main/ft/jetton-minter-discoverable.fc
+;; instead of this contract, see https://github.com/ton-blockchain/TEPs/blob/master/text/0089-jetton-wallet-discovery.md
+
 ;; Jettons minter smart contract
 
 ;; storage scheme
