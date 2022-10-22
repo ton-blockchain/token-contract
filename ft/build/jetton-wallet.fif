@@ -22,7 +22,7 @@ PROGRAM{
     EQUAL	//  _6
     333 THROWIFNOT
   }>
-  pack_jetton_wallet_data PROC:<{
+  pack_jetton_wallet_data PROCINLINE:<{
     //  balance owner_address jetton_master_address jetton_wallet_code
     NEWC	//  balance owner_address jetton_master_address jetton_wallet_code _4
     s0 s4 XCHG2	//  jetton_wallet_code owner_address jetton_master_address _4 balance
@@ -34,7 +34,7 @@ PROGRAM{
     STREF	//  _8
     ENDC	//  _9
   }>
-  calculate_jetton_wallet_state_init PROC:<{
+  calculate_jetton_wallet_state_init PROCINLINE:<{
     //  owner_address jetton_master_address jetton_wallet_code
     0 PUSHINT	//  owner_address jetton_master_address jetton_wallet_code _3=0
     s0 s1 s2 XCPUXC
@@ -49,7 +49,7 @@ PROGRAM{
     1 STU	//  _13
     ENDC	//  _14
   }>
-  calculate_jetton_wallet_address PROC:<{
+  calculate_jetton_wallet_address PROCINLINE:<{
     //  state_init
     HASHCU	//  _1
     0 PUSHINT	//  _1 _2
@@ -61,12 +61,12 @@ PROGRAM{
     ENDC	//  _11
     CTOS	//  _12
   }>
-  calculate_user_jetton_wallet_address PROC:<{
+  calculate_user_jetton_wallet_address PROCINLINE:<{
     //  owner_address jetton_master_address jetton_wallet_code
     calculate_jetton_wallet_state_init INLINECALLDICT	//  _3
     calculate_jetton_wallet_address INLINECALLDICT	//  _4
   }>
-  load_data PROC:<{
+  load_data PROCINLINE:<{
     // 
     c4 PUSH	//  _1
     CTOS	//  ds
@@ -76,7 +76,7 @@ PROGRAM{
     LDREF	//  _3 _5 _7 _18 _17
     DROP	//  _3 _5 _7 _9
   }>
-  save_data PROC:<{
+  save_data PROCINLINE:<{
     //  balance owner_address jetton_master_address jetton_wallet_code
     pack_jetton_wallet_data INLINECALLDICT	//  _4
     c4 POP
@@ -363,30 +363,32 @@ PROGRAM{
       on_bounce CALLDICT
     }>	//  my_balance msg_value in_msg_body cs
     LDMSGADDR	//  my_balance msg_value in_msg_body sender_address cs
-    LDMSGADDR	//  my_balance msg_value in_msg_body sender_address _49 _48
+    LDMSGADDR	//  my_balance msg_value in_msg_body sender_address _52 _51
     NIP	//  my_balance msg_value in_msg_body sender_address cs
-    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _51 _50
+    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _54 _53
     NIP	//  my_balance msg_value in_msg_body sender_address cs
     1 PUSHINT	//  my_balance msg_value in_msg_body sender_address cs _22=1
     SDSKIPFIRST	//  my_balance msg_value in_msg_body sender_address cs
-    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _53 _52
+    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _56 _55
     NIP	//  my_balance msg_value in_msg_body sender_address cs
-    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _55 _54
-    DROP	//  my_balance msg_value in_msg_body sender_address fwd_fee
+    LDVARUINT16	//  my_balance msg_value in_msg_body sender_address _58 _57
+    DROP	//  my_balance msg_value in_msg_body sender_address _27
+    3 PUSHINT	//  my_balance msg_value in_msg_body sender_address _27 _29=3
+    1 MULRSHIFT#	//  my_balance msg_value in_msg_body sender_address fwd_fee
     s0 s2 XCHG	//  my_balance msg_value fwd_fee sender_address in_msg_body
     32 LDU	//  my_balance msg_value fwd_fee sender_address op in_msg_body
-    0xf8a7ea5 PUSHINT	//  my_balance msg_value fwd_fee sender_address op in_msg_body _33
-    s2 s(-1) PUXC	//  my_balance msg_value fwd_fee sender_address op in_msg_body op _33
-    EQUAL	//  my_balance msg_value fwd_fee sender_address op in_msg_body _34
+    0xf8a7ea5 PUSHINT	//  my_balance msg_value fwd_fee sender_address op in_msg_body _36
+    s2 s(-1) PUXC	//  my_balance msg_value fwd_fee sender_address op in_msg_body op _36
+    EQUAL	//  my_balance msg_value fwd_fee sender_address op in_msg_body _37
     IFJMP:<{	//  my_balance msg_value fwd_fee sender_address op in_msg_body
       NIP
       s4 POP	//  in_msg_body msg_value fwd_fee sender_address
       -ROT	//  in_msg_body sender_address msg_value fwd_fee
       send_tokens CALLDICT
     }>	//  my_balance msg_value fwd_fee sender_address op in_msg_body
-    0x178d4519 PUSHINT	//  my_balance msg_value fwd_fee sender_address op in_msg_body _36
-    s2 s(-1) PUXC	//  my_balance msg_value fwd_fee sender_address op in_msg_body op _36
-    EQUAL	//  my_balance msg_value fwd_fee sender_address op in_msg_body _37
+    0x178d4519 PUSHINT	//  my_balance msg_value fwd_fee sender_address op in_msg_body _39
+    s2 s(-1) PUXC	//  my_balance msg_value fwd_fee sender_address op in_msg_body op _39
+    EQUAL	//  my_balance msg_value fwd_fee sender_address op in_msg_body _40
     IFJMP:<{	//  my_balance msg_value fwd_fee sender_address op in_msg_body
       NIP	//  my_balance msg_value fwd_fee sender_address in_msg_body
       s4 s4 s4 XCHG3
@@ -394,14 +396,14 @@ PROGRAM{
       receive_tokens CALLDICT
     }>	//  my_balance msg_value fwd_fee sender_address op in_msg_body
     s5 POP	//  in_msg_body msg_value fwd_fee sender_address op
-    0x595f07bc PUSHINT	//  in_msg_body msg_value fwd_fee sender_address op _39
-    EQUAL	//  in_msg_body msg_value fwd_fee sender_address _40
+    0x595f07bc PUSHINT	//  in_msg_body msg_value fwd_fee sender_address op _42
+    EQUAL	//  in_msg_body msg_value fwd_fee sender_address _43
     IFJMP:<{	//  in_msg_body msg_value fwd_fee sender_address
       -ROT	//  in_msg_body sender_address msg_value fwd_fee
       burn_tokens CALLDICT
     }>	//  in_msg_body msg_value fwd_fee sender_address
     4 BLKDROP	// 
-    16 PUSHPOW2DEC	//  _42=65535
+    16 PUSHPOW2DEC	//  _45=65535
     THROWANY
   }>
   get_wallet_data PROC:<{

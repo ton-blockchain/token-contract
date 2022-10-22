@@ -110,7 +110,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     cs~load_coins(); ;; skip value
     cs~skip_bits(1); ;; skip extracurrency collection
     cs~load_coins(); ;; skip ihr_fee
-    int fwd_fee = cs~load_coins(); ;; we use message fwd_fee for estimation of forward_payload costs
+    int fwd_fee = muldiv(cs~load_coins(), 3, 2); ;; we use message fwd_fee for estimation of forward_payload costs
 
 
     (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();

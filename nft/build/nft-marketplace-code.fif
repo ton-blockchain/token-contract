@@ -5,14 +5,14 @@ PROGRAM{
   DECLPROC save_data
   DECLPROC recv_internal
   DECLPROC recv_external
-  load_data PROC:<{
+  load_data PROCINLINE:<{
     // 
     c4 PUSH	//  _1
     CTOS	//  ds
     LDMSGADDR	//  _6 _5
     DROP	//  _3
   }>
-  save_data PROC:<{
+  save_data PROCINLINE:<{
     //  owner_address
     NEWC	//  owner_address _1
     SWAP	//  _1 owner_address
