@@ -21,7 +21,7 @@ PROGRAM{
     EQUAL	//  _6
     333 THROWIFNOT
   }>
-  load_data PROC:<{
+  load_data PROCINLINE:<{
     // 
     c4 PUSH	//  _1
     CTOS	//  ds
@@ -32,7 +32,7 @@ PROGRAM{
     LDREF	//  _3 _5 _8 _10 _23 _22
     DROP	//  _3 _5 _8 _10 _12
   }>
-  save_data PROC:<{
+  save_data PROCINLINE:<{
     //  owner_address next_item_index content nft_item_code royalty_params
     NEWC	//  owner_address next_item_index content nft_item_code royalty_params _5
     s0 s5 XCHG2	//  royalty_params next_item_index content nft_item_code _5 owner_address
@@ -99,7 +99,7 @@ PROGRAM{
     1 PUSHINT	//  _39 _40=1
     SENDRAWMSG
   }>
-  send_royalty_params PROC:<{
+  send_royalty_params PROCINLINE:<{
     //  to_address query_id data
     0xa8cb00ad PUSHINT	//  to_address query_id data _4
     0 PUSHINT	//  to_address query_id data _4 _5=0

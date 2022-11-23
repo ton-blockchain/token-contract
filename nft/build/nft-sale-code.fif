@@ -8,7 +8,7 @@ PROGRAM{
   DECLPROC recv_internal
   DECLPROC recv_external
   72748 DECLMETHOD get_sale_data
-  load_data PROC:<{
+  load_data PROCINLINE:<{
     // 
     c4 PUSH	//  _1
     CTOS	//  ds
@@ -19,7 +19,7 @@ PROGRAM{
     LDREF	//  _3 _5 _7 _9 _22 _21
     DROP	//  _3 _5 _7 _9 _11
   }>
-  load_fees PROC:<{
+  load_fees PROCINLINE:<{
     //  fees_cell
     CTOS	//  ds
     LDVARUINT16	//  _3 ds
@@ -27,7 +27,7 @@ PROGRAM{
     LDVARUINT16	//  _3 _5 _14 _13
     DROP	//  _3 _5 _7
   }>
-  save_data PROC:<{
+  save_data PROCINLINE:<{
     //  marketplace_address nft_address nft_owner_address full_price fees_cell
     NEWC	//  marketplace_address nft_address nft_owner_address full_price fees_cell _5
     s0 s5 XCHG2	//  fees_cell nft_address nft_owner_address full_price _5 marketplace_address
