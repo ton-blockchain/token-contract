@@ -27,3 +27,7 @@ Contains an example of a simple ICO smart contract.
 ## Semi-Fungible
 
 Semi-Fungible tokens is combination of NFT and FT.
+
+# Compile
+
+Compiled contracts are in `build/` folders. Compiled by [func-0.3.0](https://github.com/ton-blockchain/ton/releases/tag/func-0.3.0).
