@@ -70,6 +70,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     slice response_destination = in_msg_body~load_msg_addr();
     in_msg_body~load_int(1); ;; this nft don't use custom_payload
     int forward_amount = in_msg_body~load_coins();
+    throw_unless(708, slice_bits(in_msg_body) >= 1);
 
     int rest_amount = my_balance - min_tons_for_storage();
     if (forward_amount) {
