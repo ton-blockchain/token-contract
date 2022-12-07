@@ -1,0 +1,7 @@
+const int one_unit = 1000000000; ;; 10^9
+
+;; These are not standardized values each Jetton can have it's own fee guidelines
+const int jetton_min_storage = 10000000; ;;0.01 TON
+const int jetton_gas_fee     = 10000000; ;;0.01 TON
+
+

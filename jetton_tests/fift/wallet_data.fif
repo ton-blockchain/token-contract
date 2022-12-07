@@ -1,0 +1,30 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+1000000000 10 * constant initial_balance // Wallet balance 
+"build/jetton_wallet.fif" constant wallet_code
+
+/* 
+ This file is primerely for tests to run
+ Main way of deploying jetton wallet is via jetton minter "mint" operation.
+ Sending jettons from already deployed wallet is also an option
+ Thus random 256 bit value will be used ans and address for collection and owner
+
+ We're going to use newkeypair as a way to generate two random 256 bit values
+ Do not do that in real app 
+*/
+
+newkeypair 
+
+256 B>u@
+swap
+256 B>u@
+
+<b
+  initial_balance Gram, // 10 jettons balance ( if decimals is set to 9 )
+  Basechain rot Addr, // owner
+  Basechain rot Addr, // minter addr
+  wallet_code include
+  over tuple? { nip } if // In testing mode include will produce tuple with method names we don't want that in the cell 
+  ref, // wallet code
+b>

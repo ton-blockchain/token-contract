@@ -1,0 +1,38 @@
+jetton_minter:
+  data: fift/minter_data.fif
+  func:
+    - ../ft/op-codes.fc
+    - ../ft/params.fc
+    - ../ft/jetton-utils.fc
+    - ../ft/discovery-params.fc
+    - tests/utils/helpers.func
+    - ../ft/jetton-minter.fc
+  tests:
+    - tests/minter-tests.func
+    - tests/minter-tests-int.func
+
+jetton_discoverable:
+  data: fift/minter_data.fif
+  func:
+    - ../ft/op-codes.fc
+    - ../ft/params.fc
+    - tests/utils/helpers.func
+    - ../ft/jetton-utils.fc
+    - ../ft/discovery-params.fc
+    - ../ft/jetton-minter-discoverable.fc
+  tests:
+    - tests/minter-tests.func
+    - tests/minter-tests-int.func
+
+
+jetton_wallet:
+  data: fift/wallet_data.fif
+  func:
+    - ../ft/op-codes.fc
+    - ../ft/params.fc
+    - ../ft/jetton-utils.fc
+    - tests/utils/helpers.func
+    - ../ft/jetton-wallet.fc
+  tests:
+    - tests/wallet-tests.func
+    - tests/wallet-tests-int.func

@@ -1,0 +1,96 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+
+
+int __test_get_jetton_data_mint() {
+
+	var( gas_before, stack ) = invoke_method( get_jetton_data, [] );
+
+	int total_supply = stack.first();
+	int mintable?    = stack.second();
+	slice admin      = stack.third();
+	cell content     = stack.fourth();
+	cell code        = stack.at( 4 );
+
+
+	;; Can't test non mintable contract with mint message.
+	if( ~ mintable? ) {
+		return gas_before;
+	}
+
+	int query_id     = rand(1337) + 1;
+	int forward_ton  = one_unit / 10;
+	int mint_amount  = ( rand( 100 ) + 1 ) * one_unit / 10;
+	slice rand_addr  = generate_internal_address_with_custom_data(0, 0, random());
+	slice mint_dst   = generate_internal_address_with_custom_data(0, 0, random());
+	slice mint_from  = generate_empty_address();
+	cell mint_payload = generate_jetton_internal_transfer_request( query_id, mint_amount, mint_from, rand_addr, forward_ton, null(), false ).end_cell();
+	builder mint_body = generate_internal_message_body( op_mint, query_id ).store_slice( mint_dst ).store_grams( forward_ton ).store_ref( mint_payload );
+	;; Testing mint with non-admin address
+	cell msg          = generate_internal_message_custom( 0, 0, 0,  mint_body, admin, null(), 0 );
+
+	var( gas_mint, _ ) = invoke_method( recv_internal, [ one_unit, one_unit, msg, mint_body.end_cell().begin_parse() ] );
+	var( gas_after, stack ) = invoke_method( get_jetton_data, [] );
+	;; Total supply should increase by our mint_amount
+	throw_unless( 500, total_supply + mint_amount == stack.first() );
+
+	;; Rest should not change
+
+	throw_unless( 501, mintable? == stack.second() );
+	throw_unless( 502, equal_slices( admin, stack.third() ) );
+	throw_unless( 503, equal_slices( content.begin_parse(), stack.fourth().begin_parse() ) );
+	throw_unless( 504, equal_slices( code.begin_parse(), stack.at( 4 ).begin_parse() ) );
+
+
+	return gas_before + gas_mint + gas_after;
+}
+
+int __test_get_jetton_data_burn() {
+
+	var( gas_before, stack ) = invoke_method( get_jetton_data, [] );
+
+	int total_supply = stack.first();
+	int mintable?    = stack.second();
+	slice admin      = stack.third();
+	cell content     = stack.fourth();
+	cell  code       = stack.at( 4 );
+
+	;;Nothing to burn
+	if( total_supply == 0 ) {
+		return gas_before;
+	}
+
+	{-
+	 If jetton is not mintabe, does it mean that it's necesserely
+	 non-burnable too? IDK.
+	 I'd say doesn't and burnable? flag required.
+	 So we would ignore mintable? in this test.
+	-}
+
+	int query_id     = rand(1337) + 1;
+	int forward_ton  = one_unit / 10;
+	int burn_amount  = ( rand( 100 ) + 1 ) * one_unit / 10;
+
+	slice jetton_addr = my_address(); ;;In testing mode my_address() for test code equals  my_address() for contract code
+	slice sender      = generate_internal_address_with_custom_data( 0, 0, random() );
+	slice src	      = calculate_user_jetton_wallet_address( sender, jetton_addr, code );
+	var msg_body      = generate_jetton_burn_notification( query_id, burn_amount, sender, admin );
+	cell msg          = generate_internal_message_custom( 0, 0, 0, msg_body, src, null(), 0);
+	
+	( int gas_burn, _ ) = invoke_method( recv_internal, [one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	( int gas_after, stack ) = invoke_method( get_jetton_data, [] );
+
+
+	throw_unless( 500, total_supply - burn_amount == stack.first() );
+
+	;; Rest should not change
+
+	throw_unless( 501, mintable? == stack.second() );
+	throw_unless( 502, equal_slices( admin, stack.third() ) );
+	throw_unless( 503, equal_slices( content.begin_parse(), stack.fourth().begin_parse() ) );
+	throw_unless( 504, equal_slices( code.begin_parse(), stack.at( 4 ).begin_parse() ) );
+
+	return gas_before + gas_burn + gas_after;
+}
