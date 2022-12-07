@@ -1,0 +1,68 @@
+"TonUtil.fif" include
+"Color.fif" include
+"Asm.fif" include
+
+// toncli creates file in fift-libs
+// where store deploy wallet address
+// you can use this address to control nft or nft collection
+"OwnerAddr.fif" include
+
+// "EQDlT07NpSh0uj-aSBkF2TRxOqR2nw0ErOQsA6TYakr1-FxP" instead of owner_address <- you can use address in any form
+// or use address of toncli deploy wallet:
+owner_address constant collection_owner_address
+
+// Change to your own
+"EQB8EqvPWlUq6g3pZPW9AQU4xLDDh65MxfFT_UStljYuCy_X" constant royalty_address
+
+// 5 / 100 = 5% :)
+5 constant royalty_numerator
+100 constant royalty_denominator
+
+// Specify your own collection base uri
+"https://raw.githubusercontent.com/Trinketer22/token-contract/main/nft/web-example/" constant collection_base
+
+// Specify your own collection metadata uri
+"https://raw.githubusercontent.com/Trinketer22/token-contract/main/nft/web-example/my_collection.json" constant collection_json
+
+
+// Path to builded NFT smart contract
+"build/nft.fif" constant nft_path
+
+// Parse and save addresses
+
+royalty_address $>smca 0= abort"Specify valid royalty addr" drop
+2constant royalty_raw
+
+collection_owner_address $>smca 0= abort"Specify valid owner addr" drop
+2constant owner_raw
+
+^reset ."👽 Owner Address: "  owner_address ^green type cr
+^reset ."👻 Royalty Address: " royalty_address ^green type cr
+^reset
+
+nft_path include constant nft_code
+
+// just little helper
+{ <b 1 8 u, swap $>B B, b> } : offchain-token-data
+
+
+// This is final c4 of smart contract
+// It will be loaded in nft-collection.func in 11 line
+
+<b
+  owner_raw Addr, // owner address
+  0 64 u, // start nft index
+
+  <b
+    collection_json offchain-token-data ref, // Storing common ref
+    <b collection_base $>B B, b> ref,
+  b> ref, // content cell
+
+  nft_code ref, // nft code
+
+  <b
+    royalty_numerator 16 u,
+    royalty_denominator 16 u,
+    royalty_raw Addr,
+  b> ref, // royalty cell
+b>

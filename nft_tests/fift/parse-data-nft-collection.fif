@@ -1,0 +1,60 @@
+"TonUtil.fif" include
+"Color.fif" include
+
+// In stack: init?, index,  collection address, owner_address, body
+4 roll // In stack: index,  collection address, owner_address, body, init?
+^reset ."👋 NFT is inited: " ^magenta (dump) type cr
+
+3 roll // In stack: collection address, owner_address, body, index
+constant index
+^reset ."👿 NFT index: " ^green index (dump) type cr
+
+
+^reset 2 roll addr@ ."🤗 Collection address: " ^yellow print-addr cr // In stack: owner_address, body, collection address SLICE
+constant nft-body
+^reset ."🤯 NFT Body: " nft-body <s ^cyan (dump) type cr //  In stack: owner_address, collection address SLICE, body SLICE
+^reset ."👻 NFT owner: "  addr@ -rot 2constant nft_owner_address nft_owner_address rot ^green  print-addr cr //  In stack: collection address SLICE, body SLICE, owner_address SLICE
+
+nft-body <s dup sbits 8 / B@ constant nft-data
+
+^reset ."😏 NFT individual content: "  nft-data ^green  (dump) type cr
+^reset ."😏 NFT individual content parsed: " nft-data B>$ (dump) type cr
+
+
+// Parse data with collection
+
+"../build/nft_collection.fif" include constant collection-code
+"./collection-data.fif" include constant collection-data
+
+0x076ef1ea           // magic
+0                    // actions
+0                    // msgs_sent
+0           // unixtime
+1                    // block_lt
+0       // trans_lt
+239                  // randseed
+1000000000 null pair // balance_remaining
+<b nft_owner_address Addr, b> <s   // myself
+null            // global_config
+10 tuple 1 tuple constant c7 // save as c7 cell
+
+index
+nft-body
+68445 // function selector (get_nft_content)
+collection-code <s // load func code as slice
+collection-data // add c4 cell lodaded from lite-client
+c7 // add c7 cell
+0x35 runvmx // Runvm, in stack now seqno
+2drop drop
+<s
+^reset ."🤪 NFT type tag: " 8 u@+ swap  ^green (dump) type cr
+
+^reset ."😏 NFT collection base content: " dup sbits 8 / B@+ swap dup constant collection-nft-data ^cyan  (dump) type cr
+^reset ."😏 NFT collection base content: " collection-nft-data B>$ ^cyan  (dump) type cr
+
+.s
+^reset ."😏 NFT individual content: " ref@ <s dup sbits 8 / B@ dup constant nft-data ^green  (dump) type cr
+^reset ."😏 NFT individual content: " nft-data B>$ ^green  (dump) type cr
+
+^reset ."🐾 NFT data: "  <b collection-nft-data  B, nft-data B, b> <s dup sbits 8 / B@ ^cyan  (dump) type cr
+^reset ."🐾 NFT data: "  <b collection-nft-data  B, nft-data B, b> <s dup sbits 8 / B@ B>$ ^cyan (dump) type cr

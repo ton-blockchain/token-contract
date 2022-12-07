@@ -1,0 +1,38 @@
+(slice, int, cell, cell, cell) load_test_data() inline {
+    var ds = get_data().begin_parse();
+    return (    ds~load_msg_addr(), ;; owner_address
+                ds~load_uint(64), ;; next_item_index
+                ds~load_ref(), ;; content
+                ds~load_ref(), ;; nft_item_code
+                ds~load_ref() ;; royalty_params
+            );
+}
+
+slice get_owner() {
+    (slice owner, _, _, _, _) = load_test_data();
+    return owner;
+}
+
+cell get_content() inline {
+    (_, _, cell content, _, _) = load_test_data();
+    return content;
+}
+
+int get_nft_index() inline {
+    (_, int idx, _, _, _) = load_test_data();
+
+    return idx;
+}
+
+( int, int, slice ) load_test_royalty() {
+	( _, _, _, _, cell royalty ) = load_test_data();
+	slice ds = royalty.begin_parse();
+
+	return ( ds~load_uint( 16 ), ds~load_uint( 16 ), ds~load_msg_addr() );
+}
+
+( int, int, slice ) get_test_royalty() {
+	( _, tuple stack ) = invoke_method( royalty_params, [] );
+
+	return ( stack.first(), stack.second(), stack.third() );
+}

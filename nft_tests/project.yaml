@@ -1,0 +1,21 @@
+nft_collection:
+  data: fift/collection-data.fif
+  func:
+    - func/utils/helpers.func
+    - ../nft//params.fc
+    - ../nft//op-codes.fc
+    - ../nft//nft-collection.fc
+  tests:
+    - tests/collection-tests.func
+    - tests/collection-tests-int.func
+
+nft:
+  data: fift/nft-data.fif
+  func:
+    - func/utils/helpers.func
+    - ../nft/params.fc
+    - ../nft/op-codes.fc
+    - ../nft/nft-item.fc
+  tests:
+    - tests/nft-tests.func
+    - tests/nft-tests-int.func
