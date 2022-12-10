@@ -1,0 +1,27 @@
+"TonUtil.fif" include
+
+"EQDRebAnF1pvH1YsKNp7mtpsz+CLs6WxaffUojt1ijyrazkg" constant receiver_address
+1000000000 constant send_amount
+20000000 constant forward_amount
+12345 constant query_id
+0xf8a7ea5 constant op_transfer
+
+receiver_address
+$>smca 0= abort"Specify valid send addr"
+drop  // Drop flags
+
+2constant send_addr // worchain and addr into single constant
+<b
+  op_transfer 32 u, // op transfer
+  query_id 64 u, // query_id
+  send_amount Gram, // Sending one jetton
+  send_addr Addr,
+  0 2 u, // addr_none for resp_dst
+  0 1 u, // No custom payload
+  forward_amount Gram, // forward ton amount 0.03
+  0 1 u, // no ref forward_payload
+b>
+// Here goes master message
+// internal_transfer
+
+

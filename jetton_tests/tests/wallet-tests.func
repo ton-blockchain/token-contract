@@ -1,0 +1,666 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+#include "utils/op-codes.fc";
+
+
+( int, slice, slice, cell ) load_test_data() inline {
+
+	slice ds = get_data().begin_parse();
+	return (ds~load_coins(), ds~load_msg_addr(), ds~load_msg_addr(), ds~load_ref());
+}
+
+( slice ) get_owner() inline {
+
+	slice ds = get_data().begin_parse();
+	ds~load_coins();
+
+	return ds~load_msg_addr();
+}
+
+( slice ) get_master() inline {
+	slice ds = get_data().begin_parse();
+	ds~load_coins();
+	ds~load_msg_addr();
+	return ds~load_msg_addr();
+}
+
+( int )  get_test_balance() inline {
+	slice ds = get_data().begin_parse();
+
+	return ds~load_coins();
+}
+
+( cell,() ) replace_msg_source( cell msg, slice new_addr ) inline {
+	slice   old_msg = msg.begin_parse();
+	builder new_msg = begin_cell().store_slice( old_msg~load_bits( 4 ) );
+	old_msg~load_msg_addr(); ;;Skip source addr
+	new_msg = new_msg.store_slice( new_addr ).store_slice( old_msg ); ;;Store new addr and the rest of the orig msg
+
+	return ( new_msg.end_cell(),() );
+
+}
+
+slice gen_non_owner( slice old_owner ) inline {
+	slice new_owner = generate_internal_address_with_custom_data( 0, 0, random() );
+
+	;; In theory we can win a bingo and get same 256bit integer from RNG
+	while( equal_slices( new_owner, old_owner ) ) {
+		new_owner = generate_internal_address_with_custom_data( 0, 0, random() );
+	}
+
+	return new_owner;
+}
+
+( slice, slice, slice, int ) setup_req_fields() {
+	slice owner    = get_owner();
+	slice dst      = generate_internal_address_with_custom_data( 0, 0, random() );
+	slice resp_dst = generate_internal_address_with_custom_data( 0, 0, random() );
+
+	return ( owner, dst, resp_dst, rand( 1337 ) + 1 );
+}
+
+cell get_state_init_field( tuple state_init, int idx ) inline {
+	cell res = null();
+	;; Next flag index
+	int next_idx = 0;
+
+	do {
+		int flag = state_init.at( next_idx );
+
+		next_idx = flag ? next_idx + 2 : next_idx + 1;
+		idx -= 1;
+
+		if( idx == 0 & flag ) {
+			res = state_init.at( next_idx - 1 );
+		}
+
+	} until( ~ res.null?() | idx <= 0 )
+
+	return res;
+}
+
+_ verify_transfer_notification( cell msg, int jetton_amount, int query_id, slice dst, slice resp_dst, slice sender, int forward_amount, cell payload  ) impure inline {
+	{-
+	transfer_notification#7362d09c query_id:uint64 amount:(VarUInteger 16)
+                              sender:MsgAddress forward_payload:(Either Cell ^Cell)
+                              = InternalMsgBody;
+
+	Transfer notification message is sent when forward_amount > 0 from receiver to sender wallet
+	1) query_id should be equal to the query_id of sender request
+	2) jetton_amount should be equal to the amount of transfered jettons
+	3) sender should be equal to the sender address
+	4) forward_payload ( if any ) should be equal to the payload of sender request
+	-}
+
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	{-
+	 Why it's dst and ton resp_dst?
+	 I don't fully get it, but by standard:
+	 if forward_amount > 0 ensure that receiver's jetton-wallet send message to destination address with forward_amount nanotons attached
+	 Probably has something to do with separating excess and forward amount value
+	-}
+	throw_unless( 801, equal_slices( dst, parsed_msg.at( 4 ) ) );
+
+	;;forward_amount tons should be attached
+	throw_unless( 802, forward_amount == parsed_msg.at( 5 )  );
+
+	slice msg_body	= parsed_msg.at( 8 );
+
+	throw_unless( 803, op_transfer_notification == msg_body~load_uint( 32 ) );
+
+	throw_unless( 804, query_id == msg_body~load_uint( 64 ) );
+
+	throw_unless( 805, jetton_amount == msg_body~load_coins() );
+
+	throw_unless( 806, equal_slices( sender, msg_body~load_msg_addr() ) );
+
+	if( ~ null?( payload ) ) {
+		if( msg_body~load_uint( 1 ) ) {
+			throw_unless( 807, equal_slices( payload.begin_parse(), msg_body~load_ref().begin_parse() ) );
+		}
+		else {
+			throw_unless( 807, equal_slices( payload.begin_parse(), msg_body ) );
+		}
+	}
+}
+
+_ verify_burn_notification( cell msg, int query_id, int burn_amount, slice sender, slice resp_dst ) impure inline {
+	{-
+	  burn_notification query_id:uint64 amount:(VarUInteger 16)
+	       sender:MsgAddress response_destination:MsgAddress
+	       = InternalMsgBody;
+
+	  Burn notification is sent to master jetton( minter ) contract  on successfull burn
+
+	  1) Message dst addr should be equal to master jetton addr
+	  2) query_id should be equal to request query_id
+	  3) amount should be equal to request burn_amount
+	  4) response_destination should be equal to request resp_dst
+
+	-}
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	;; Burn notification should be sent to master
+	throw_unless( 901, equal_slices( get_master(), parsed_msg.at( 4 ) ) );
+
+	slice msg_body	 = parsed_msg.at( 8 );
+
+	throw_unless( 902, op_burn_notification  == msg_body~load_uint( 32 ) );
+
+	throw_unless( 903, query_id == msg_body~load_uint( 64 ) );
+
+	throw_unless( 903, burn_amount == msg_body~load_coins() );
+
+	throw_unless( 904, equal_slices( sender, msg_body~load_msg_addr() ) );
+
+	throw_unless( 905, equal_slices( resp_dst, msg_body~load_msg_addr() ) );
+}
+
+_ verify_excess_jetton( int query_id, slice resp_dst, int msg_value, int forward_fee, int forward_amount, cell msg ) impure inline {
+	{-
+	TL-B schema: excesses#d53276db query_id:uint64 = InternalMsgBody;
+	Excess message should be sent to resp_dst with all of the msg_value - fees taken to process
+	We verify that:
+	1) message is sent to resp_dst
+	2) attached amount is at least msg_value - forward_fee * 2
+	3) op matches excess op
+	4) query_id matches request query_id
+	-}
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	;;Check dst_addr to be equal to resp_dst
+	throw_unless( 701, equal_slices( resp_dst, parsed_msg.at( 4 ) ) );
+
+	int total_sent  = parsed_msg.at( 5 );
+	int should_sent = msg_value - forward_amount - forward_fee * 2;
+
+	throw_unless( 702, total_sent >= should_sent );
+
+	slice msg_body = parsed_msg.at( 8 );
+
+	throw_unless( 703, op_excesses == msg_body~load_uint( 32 ) );
+
+	throw_unless( 704, query_id == msg_body~load_uint( 64 ) );
+}
+
+int transfer_test_msg_value( int msg_value, int forward_fee, int forward_amount, int expect_fail? ) impure inline {
+	{-
+	 Transfer should be rejected if wallet has less  or equal to
+	 forward_amount + number of forwarded messages ( 1 if no forward_amount 2 otherwise ) * fwd_fee + jetton_gas_fee + jetton_min_storage
+	 on the balance.
+	 Tricky part is that forward and response part happens on the receiver wallet.
+	 So jetton_gas_fee should be taken twice by sender and the receiver + one min_storage on the receiver part
+	 Thus IMHO at least one jetton_gas_fee should be accounted from sender balance and not msg_value.
+	 However author if this contract comparse all of that vs msg_value that would be passed to the receiver
+	 https://github.com/ton-blockchain/token-contract/blob/main/ft/jetton-wallet.fc#L80
+	-}
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	int gas_used	    = 0;
+	int transfer_amount = get_test_balance();
+	builder msg_body = generate_jetton_transfer_request( query_id, transfer_amount, dst,resp_dst, null(), forward_amount, null(), false );
+	cell    msg	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), forward_fee );
+
+	if( expect_fail? ) {
+		;; Should fail with no actions
+		gas_used 	    = invoke_method_expect_fail( recv_internal, [ one_unit, msg_value, msg, msg_body.end_cell().begin_parse() ] );
+		assert_no_actions();
+	}
+	else {
+
+		var ( gas_used, _ ) = invoke_method( recv_internal, [one_unit, msg_value + jetton_min_storage, msg, msg_body.end_cell().begin_parse() ] );
+	}
+
+	return gas_used;
+}
+
+{-
+  Testing wallet transfer query handling
+
+  transfer#0f8a7ea5 query_id:uint64 amount:(VarUInteger 16) destination:MsgAddress
+                 response_destination:MsgAddress custom_payload:(Maybe ^Cell)
+                 forward_ton_amount:(VarUInteger 16) forward_payload:(Either Cell ^Cell)
+                 = InternalMsgBody;
+
+-}
+
+int __test_transfer_not_owner() {
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	slice non_owner  = gen_non_owner( owner );
+	int   query_id   = rand( 1337 ) + 1;
+	builder msg_body = generate_jetton_transfer_request( query_id, one_unit, dst,resp_dst, null(), 0, null(), false );
+	cell    msg	 = generate_internal_message_custom( 0, 0, 0, msg_body, non_owner, null(), 0 );
+
+	;; Should fail with no actions
+	int gas_err	 = invoke_method_expect_fail( recv_internal, [ one_unit * 10, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;;Now verify that owner addr triggered fail by changing source to owner addr
+
+	msg		 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_success, _ ) = invoke_method( recv_internal, [ one_unit * 10, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	return gas_err + gas_success;
+}
+
+int __test_transfer_no_jettons() {
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	int balance = get_test_balance();
+	int transfer_amount = balance * 10; ;; Going to ask for way more jettons
+
+
+	builder msg_body = generate_jetton_transfer_request( query_id, transfer_amount, dst,resp_dst, null(), 0, null(), false );
+	cell    msg	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	;; Should fail with no actions
+	int gas_err	 = invoke_method_expect_fail( recv_internal, [ one_unit * 10, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;; Now let's verify that balance triggers fail by requesting transfer equal to balance amount
+
+	msg_body 	 = generate_jetton_transfer_request( query_id, balance, dst,resp_dst, null(), 0, null(), false );
+
+	msg	 	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_success, _ ) = invoke_method( recv_internal, [ one_unit * 10, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	return gas_err + gas_success;
+}
+
+int __test_transfer_storage_fee() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = transfer_fee + muldiv(forward_fee, 3, 2) * msg_expected + forward_amount + excesses; ;;Account for everythin except storage fee
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + jetton_min_storage, forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+
+int __test_transfer_jetton_gas_fee() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = muldiv(forward_fee, 3, 2) * msg_expected + forward_amount + excesses; ;;Account for everythin except transfer gas fee
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + transfer_fee, forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+int __test_transfer_forward_fee_once() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = 0; ;;one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = transfer_fee + forward_amount + excesses; ;;Account for everythin except forward_fee;
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + muldiv(forward_fee, 3, 2), forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+int __test_transfer_forward_fee_twice() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = transfer_fee + muldiv(forward_fee, 3, 2)  + forward_amount + excesses; ;;Account for everythin except that two forward fees instead of one
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + muldiv(forward_fee, 3, 2), forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+int __test_transfer_forward_amount() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = transfer_fee + muldiv(forward_fee, 3, 2) * msg_expected + excesses; ;;Account for everythin except forward_amount
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + forward_amount, forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+int __test_transfer_excess() {
+	int transfer_fee   = jetton_gas_fee * 2;
+	int forward_fee    = one_unit / 10;
+	int forward_amount = one_unit / 4;
+	int excesses	   = 1;
+	int msg_expected   = forward_amount > 0 ? 2 : 1;
+	int msg_value      = transfer_fee + muldiv(forward_fee, 3, 2) * msg_expected + forward_amount; ;;Account for everythin except excess ( nothing to return )
+	int gas_used	   = 0;
+
+	;;Expect fail
+	gas_used 	  += transfer_test_msg_value( msg_value, forward_fee, forward_amount, true );
+
+	;; Verifying error trigger
+	gas_used	  += transfer_test_msg_value( msg_value + excesses, forward_fee, forward_amount, false ) ;
+
+	return gas_used;
+}
+
+int verify_successfull_transfer( int transfer_amount, int forward_amount, cell fwd_payload ) impure inline {
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	int forward_fee	    = one_unit / 10;
+	int msg_value	    = one_unit * 2;
+	int prev_balance    = get_test_balance();
+	int expect_messages = forward_amount > 0 ? 2 : 1;
+
+	builder msg_body = generate_jetton_transfer_request( query_id, transfer_amount, dst,resp_dst, null(), forward_amount, fwd_payload, false );
+	cell    msg	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), forward_fee );
+
+	;; Should fail with no actions
+	var ( gas_send, _ ) = invoke_method( recv_internal, [ one_unit, msg_value, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Here we should get a message sent.
+
+	tuple actions	 = parse_c5();
+
+	throw_unless( 500, actions.tuple_length() == 1 );
+
+	( int action_type, cell sent_msg, int mode ) = actions.at(0).untriple();
+
+	throw_unless( 501, action_type == 0 );
+	;; And we should verify that wallet balance decreased
+
+	throw_unless( 502, prev_balance > get_test_balance() );
+
+	{-
+	  Now here comes the tricky part.
+	  We should verify that receiver wallet would send certain messages back to dst and resp_dst
+	  At a first glace receiver wallet is deployed from this contract code so we can just relay those messages
+	  to the recv_internal of this contract.
+	  However, data in c4 is different from one deployed contract to another.
+	  So let's try to pick data from StateInit and set it to this contract c4 to make sure that it's on the same page
+	  with hypothetical receiver.
+	-}
+
+	cell old_data = get_data(); ;; Backup old c4 data
+
+
+	tuple parsed_msg   = unsafe_tuple( parse_internal_message( sent_msg ) );
+	tuple state_init   = parsed_msg.at( 7 );
+	throw_if( 503, null?( state_init ) );
+
+	;;Fourth element of StateInit is data cell
+
+	cell sent_data	   = state_init.get_state_init_field( 4 );
+	throw_if( 504, null?( sent_data ) );
+
+	set_data( sent_data ); ;;Now we got same persistent state the receiver would in real world
+	slice sent_body    = parsed_msg.at( 8 ); ;;Getting parsed msg body
+
+	{-
+	 Now we're going to have issues with the source address of the message because in tesing mode it is not going to pass
+	 calculate_user_jetton_wallet_address check
+	 So let's switch it up with the jetton master address
+	 Expect successfull execution
+	 and up to two messages.
+	 1) if forward_amount > 0 also transfer notification
+
+	 		transfer_notification#7362d09c query_id:uint64 amount:(VarUInteger 16)
+                              sender:MsgAddress forward_payload:(Either Cell ^Cell)
+                              = InternalMsgBody;
+
+	 2) excesses#d53276db query_id:uint64 = InternalMsgBody;
+	-}
+
+	sent_msg~replace_msg_source( get_master() );
+	;;Let's say balance was empty before
+	var ( gas_replay, _ ) = invoke_method( recv_internal, [ msg_value - forward_fee, msg_value - forward_fee, sent_msg, sent_body ] );
+	actions 	      = parse_c5();
+	throw_unless( 505, actions.tuple_length() == expect_messages );
+
+	if( forward_amount > 0 ) {
+
+		( action_type, cell notify_msg, mode ) = actions.at(0).untriple();
+		throw_unless( 501, action_type == 0 );
+
+		verify_transfer_notification( notify_msg, transfer_amount, query_id, dst, resp_dst, owner, forward_amount, fwd_payload );
+	}
+
+	( action_type, cell excess_msg, mode ) = actions.at( expect_messages - 1 ).untriple();
+
+	throw_unless( 501, action_type == 0 );
+
+	verify_excess_jetton( query_id, resp_dst, msg_value - forward_fee, forward_fee, forward_amount, excess_msg );
+
+	return gas_send + gas_replay;
+}
+
+int __test_transfer_success_no_fwd() {
+	int gas_used = verify_successfull_transfer( one_unit, 0, null() ); ;;Test without forward amount first
+
+	return gas_used;
+}
+
+int __test_transfer_success_with_fwd() {
+
+	cell payload = begin_cell().store_slice("Hop hey").end_cell();
+	;; 0.25 forward amount and some payload
+	int gas_used = verify_successfull_transfer( one_unit, one_unit / 4, payload ); ;;Test with forward amount
+	return gas_used;
+}
+
+{-
+	Testing burn request
+
+	burn#595f07bc query_id:uint64 amount:(VarUInteger 16)
+              response_destination:MsgAddress custom_payload:(Maybe ^Cell)
+              = InternalMsgBody;
+
+-}
+
+int burn_test_msg_value( int msg_value, int forward_fee, int expect_fail? ) impure inline {
+	;; Testing msg_value related cases
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+	int  gas_used  = 0;
+	var  msg_body  = generate_jetton_burn_request( query_id, get_test_balance() / 10, resp_dst, null() );
+	cell msg       = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), forward_fee );
+	slice ms       = msg_body.end_cell().begin_parse();
+
+	if( expect_fail? ) {
+		gas_used = invoke_method_expect_fail( recv_internal, [ msg_value, msg_value, msg, ms ] );
+	}
+	else {
+		(gas_used, _ ) = invoke_method( recv_internal, [ msg_value, msg_value, msg, ms ] );
+	}
+
+	return gas_used;
+}
+
+int __test_burn_not_owner() {
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	slice non_owner = gen_non_owner( owner );
+	var   msg_body  = generate_jetton_burn_request( query_id, one_unit * 5, resp_dst, null() ); ;;Burn 5 jetton units
+	cell  msg	= generate_internal_message_custom( 0, 0, 0, msg_body, non_owner, null(), 0 );
+	int   msg_value = one_unit;
+
+	;; Should fail with no actions
+	int gas_err	= invoke_method_expect_fail( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;; changing msg source addres to owner to verify error trigger
+	msg		= generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_success, _ ) = invoke_method( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	return gas_err + gas_success;
+}
+
+int __test_burn_too_many() {
+	;; Testing case where user burns more jettons than available on balance
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	int balance    = get_test_balance();
+	var  msg_body  = generate_jetton_burn_request( query_id, balance + 1, resp_dst, null() ); ;;Burn balance + 1 jettons
+	cell msg       = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	;; Should fail with no actions
+	int gas_err    = invoke_method_expect_fail( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;; Now transfer exactly balance to verify error trigger
+	msg_body       = generate_jetton_burn_request( query_id, balance, resp_dst, null() );
+
+	var ( gas_success, _ ) = invoke_method( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	return gas_err + gas_success;
+}
+
+int __test_burn_no_gas() {
+	int burn_fee = jetton_gas_fee * 2;
+	int forward_fee = one_unit / 10;
+	int excess 	= 1;
+	int msg_value = muldiv(forward_fee, 3, 2) + excess; ;;Only forward fee and access no gas fee
+	int gas_used  = burn_test_msg_value( msg_value, forward_fee, true );
+	assert_no_actions();
+	;; verifying error trigger
+	gas_used    += burn_test_msg_value( msg_value + burn_fee, forward_fee, false );
+
+	return gas_used;
+
+}
+
+int __test_burn_no_forward_fee() {
+	int burn_fee = jetton_gas_fee * 2;
+	int forward_fee = one_unit / 10;
+	int excess 	= 1;
+	int msg_value   = burn_fee + excess; ;;Only burn_fee and excess no forward_fee
+	int gas_used = burn_test_msg_value( msg_value, forward_fee, true );
+	assert_no_actions();
+	;; verifying error trigger
+	gas_used    += burn_test_msg_value( msg_value + muldiv(forward_fee, 3, 2), forward_fee, false );
+
+	return gas_used;
+}
+
+int __test_burn_no_excess() {
+	int burn_fee = jetton_gas_fee * 2;
+	int forward_fee = one_unit / 10;
+	int excess 	= 1;
+	int msg_value   = burn_fee + muldiv(forward_fee, 3, 2); ;;Only burn_fee + forward_fee nothing to return back
+	int gas_used = burn_test_msg_value( msg_value, forward_fee, true );
+	assert_no_actions();
+	;; verifying error trigger
+	gas_used    += burn_test_msg_value( msg_value + excess, forward_fee, false );
+
+	return gas_used;
+}
+
+int __test_burn_successfull() {
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	int balance         = get_test_balance();
+	int msg_value       = one_unit;
+	int forward_fee     = one_unit / 10;
+	int forward_amount  = one_unit / 4;
+	int burn_amount     = ( rand( 10 ) + 1 ) * balance / 10;
+
+	var  msg_body       = generate_jetton_burn_request( query_id, burn_amount, resp_dst, null() );
+	cell msg            = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+	var ( gas_used, _ ) = invoke_method( recv_internal, [ msg_value, msg_value, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Balance should decrease by burn amount
+	throw_unless( 502, balance - burn_amount == get_test_balance() );
+
+	;; We expect excess message to be sent to resp_dst
+	tuple actions  = parse_c5();
+
+	throw_unless( 505, actions.tuple_length() == 1 );
+
+	( int action_type, cell burn_note, int mode ) = actions.first().untriple();
+	throw_unless( 501, action_type == 0 );
+
+	verify_burn_notification( burn_note, query_id, burn_amount, owner, resp_dst );
+
+	return gas_used;
+
+}
+
+int __test_internal_transfer() {
+
+	var ( owner, dst, resp_dst, query_id ) = setup_req_fields();
+
+	slice from          = get_master();
+	int balance         = get_test_balance();
+	int forward_ton     = one_unit / 10;
+	int msg_value       = one_unit;
+	int transfer_amount = ( rand( 10 ) + 1 ) * one_unit / 10; ;;From 0.1 to 1 unit
+
+
+	var  msg_body       = generate_jetton_internal_transfer_request( query_id, transfer_amount, from, dst, forward_ton, null(), false );
+	cell msg            = generate_internal_message_custom( 0, 0, 0,  msg_body, from, null(), 0 );
+	var ( gas_used, _ ) = invoke_method( recv_internal, [ msg_value, msg_value, msg, msg_body.end_cell().begin_parse() ] );
+
+	throw_unless( 500, balance + transfer_amount == get_test_balance() );
+
+	return gas_used;
+}
+
+;; Get methods testing starts here
+
+int __test_get_wallet_data() {
+	var ( balance, owner, master, code ) = load_test_data();
+	var ( gas_used, stack ) = invoke_method( get_wallet_data, [] );
+
+	throw_unless( 300, stack.tuple_length() == 4 );
+	throw_unless( 301, balance == stack.first() );
+	throw_unless( 302, equal_slices( owner, stack.second() ) );
+	throw_unless( 303, equal_slices( master, stack.third() ) );
+	throw_unless( 304, equal_slices( code.begin_parse(), stack.fourth().begin_parse() ) );
+
+	return gas_used;
+}

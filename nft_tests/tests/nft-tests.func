@@ -1,0 +1,584 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+#include "../func/utils/op-codes.func";
+
+slice get_owner_addr() inline {
+	slice ds = get_data().begin_parse().skip_bits( 64 );
+	ds~load_msg_addr();
+	return ds~load_msg_addr();
+}
+
+slice gen_new_owner( slice old_owner ) inline {
+	slice new_owner = generate_internal_address_with_custom_data( 0, 0, random() );
+
+	;; In theory we can win a bingo and get same 256b integer from RNG
+	while( equal_slices( new_owner, old_owner ) ){
+		new_owner = generate_internal_address();
+	}
+
+	return new_owner;
+}
+
+( int, slice, slice, cell ) load_test_data() inline {
+	slice ds	= get_data().begin_parse();
+	int idx		= ds~load_uint( 64 );
+	slice coll_addr = ds~load_msg_addr();
+	slice owner	= ds~load_msg_addr();
+
+	;;We need all addresses on Workchain 0 otherwise force_chain will throw 333
+
+	if (coll_addr.preload_uint(2) != 0){ ;; if not addr_none
+		coll_addr.force_chain();
+	}
+
+	if (owner.preload_uint(2) != 0){
+		owner.force_chain();
+	}
+
+	return ( idx, coll_addr, owner, ds~load_ref() );
+}
+
+( slice, slice, slice ) setup_transfer_addresses( int has_dst? ) inline {
+	slice owner_addr = get_owner_addr();
+
+	;;We need all addresses on Workchain 0 otherwise force_chain will throw 333
+
+	slice new_owner   = gen_new_owner( owner_addr );
+
+	slice resp_dst    = has_dst? ? generate_internal_address_with_custom_data( 0, 0, random() ) : generate_empty_address();
+
+	return ( owner_addr, new_owner, resp_dst );
+
+}
+
+_ verify_ownership_assigned( int query_id, slice owner, slice new_owner, int forward_amount, slice forward_payload, cell msg ) impure inline {
+	{-
+	TL-B schema: ownership_assigned#05138d91 query_id:uint64 prev_owner:MsgAddress
+	forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+	query_id should be equal with request's query_id.
+	We verify that:
+	1) message is sent to the new_owner address
+	2) attached amount matches forward_amount
+	3) op matches ownership_assigned op
+	4) query_id matches query_id sent
+	5) forward_payload matches payload set
+	-}
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	throw_unless(601, equal_slices( new_owner, parsed_msg.at( 4 ) ) );
+	;; Check that forward_amount matches
+	throw_unless(602, forward_amount == parsed_msg.at( 5 ) );
+
+	slice msg_body = parsed_msg.at( 8 );
+
+	throw_unless( 603, op_ownership_assigned == msg_body~load_uint( 32 ) );
+
+	throw_unless( 604, query_id == msg_body~load_uint( 64 ) );
+
+	;;Checking for previous owner addr
+	throw_unless( 605, equal_slices( owner, msg_body~load_msg_addr() ) );
+
+	if( ~ null?( forward_payload ) ){
+		if( msg_body~load_uint( 1 ) ){
+			cell msg_payload = msg_body~load_ref();
+			throw_unless( 606, equal_slices( forward_payload, msg_payload.begin_parse() ) );
+		}
+		else {
+			throw_unless( 606, equal_slices( forward_payload, msg_body  ) );
+		}
+	}
+}
+
+_ verify_excess_sent( int query_id, slice resp_dst, int balance, int forward_fee, int forward_amount, cell msg ) impure inline {
+	{-
+	TL-B schema: excesses#d53276db query_id:uint64 = InternalMsgBody;
+	Excess message should be sent to resp_dst with all of the msg_value - fees taken to process
+	We verify that:
+	1) message is sent to resp_dst
+	2) attached amount is balance - fees taken - forward_amount
+	3) op matches excess op
+	4) query_id matches request query_id
+	-}
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	;;Check dst_addr to be equal to resp_dst
+	throw_unless( 701, equal_slices( resp_dst, parsed_msg.at( 4 ) ) );
+
+	int total_sent  = parsed_msg.at( 5 );
+	int should_sent = balance - min_storage - forward_fee;
+
+	if( forward_amount > 0 ) {
+		should_sent -= forward_amount + forward_fee;
+	}
+
+	throw_unless( 702, should_sent == total_sent );
+
+	slice msg_body = parsed_msg.at( 8 );
+
+	throw_unless( 703, op_excesses == msg_body~load_uint( 32 ) );
+
+	throw_unless( 704, query_id == msg_body~load_uint( 64 ) );
+
+}
+
+;;Transfer ownership reject cases
+
+int __test_transfer_not_owner(){
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	;;Trying to execute transfer ownership from non-owner addr
+
+	builder msg_body  = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), one_ton / 10, null(), 0 );
+	cell msg 	  = generate_internal_message_custom( 0, 0, 0, msg_body, new_owner, null(), 0 );
+
+	;;Should fail
+	int gas_used 	  = invoke_method_expect_fail( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	{-
+	 These are for testing this specific contract exit_code values invoke_method_expect_fail is more general way
+	 var ( exit_code, gas_used, _ ) = invoke_method_full( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+	 throw_unless( exit_code, exit_code == 401 );
+	 Should not generate any actions
+	-}
+
+	assert_no_actions();
+
+	;;Now let's verify that owner_addr triggered fail by changin source addr to actual owner_addr
+	;;Expect contract to return success
+
+	msg 	  	  	= generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), 0 );
+
+	( int gas_success , _ ) = invoke_method( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	return gas_used + gas_success;
+
+}
+
+int __test_transfer_forward_amount_too_large() {
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	{-
+	 NFT should reject transfer if balance lower than forward_amount + message forward fee + minimal storage fee
+	 Sending message with forward_amount of 1 TON and balance 0.1 TON
+	 Now using legit owner address
+	 TON balance:0.1 forward_amount:1 TON fwd_fee:0 verifying that forward_amount is taken into account
+	 Should fail with no actions
+	-}
+
+	builder msg_body  = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), one_ton, null(), 0 );
+	cell msg 	  = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), 0 );
+	int gas_used 	  = invoke_method_expect_fail( recv_internal, [ one_ton / 10, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	;;(int exit_code, _, _ ) =  invoke_method_full( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+	;;throw_unless( exit_code, exit_code == 402 );
+
+	assert_no_actions();
+
+	;;Now verify that balance was the error trigger by increasing contract balance to 10 TONs
+	;;Expect success
+
+	( int gas_success, _ ) = invoke_method( recv_internal, [ one_ton * 10, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+
+	return gas_used + gas_success;
+}
+
+int __test_transfer_storage_fee() {
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	{-
+	 Now let's try forward_amount exactly equal to balance and fwd_fee 0
+	 1 TON Balance forward_amount:1 TON fwd_fee:0 verifying that minimal storage comes into play
+	 Should fail with no actions
+	-}
+
+	builder msg_body  = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), one_ton, null(), 0 );
+	cell msg 	  = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), 0 );
+
+	int gas_used	  = invoke_method_expect_fail( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	assert_no_actions();
+
+	;; Let's verify that storage fee was an error trigger by increasing balance by min_storage
+	;; Expect success
+
+	( int gas_success, _ ) = invoke_method( recv_internal, [ one_ton + min_storage, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+
+	return gas_used + gas_success;
+}
+
+int __test_transfer_forward_fee_single() {
+	{-
+	 If transfer is successfull NFT supposed to send up to 2 messages
+	 1)To the owner_address with forward_amount of coins
+	 2)To the response_addr with forward_payload if response_addr is not addr_none
+	 Each of those messages costs fwd_fee
+	 Let' test the first case only by setting resp_dst to addr_none
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( false );
+
+	{-
+	 Now we test if contract takes forward fee into account by adding forward fee to the incoming message
+	 Contract balance would be 1TON + storage_fee and fwd_fee would be 0.01 TON
+	 Should fail with no actions
+	-}
+
+	int forward_fee	  = one_ton / 100;
+	int balance	  = one_ton + min_storage;
+
+	builder msg_body  = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), one_ton, null(), 0 );
+
+	cell msg 	  = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), forward_fee);
+
+	int gas_used	  = invoke_method_expect_fail( recv_internal, [ balance, 0, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;; Let's verify that forward fee was an error trigger by increasing balance by that fee
+	;; Expect success
+
+	( int gas_success, _ ) = invoke_method( recv_internal, [ balance + muldiv(forward_fee, 3, 2), 0, msg, msg_body.end_cell().begin_parse() ] );
+
+
+	return gas_used;
+}
+
+int __test_transfer_forward_fee_double() {
+
+	{-
+	 If transfer is successfull NFT supposed to send up to 2 messages
+	 1)To the owner_address with forward_amount of coins
+	 2)To the response_addr with forward_payload if response_addr is not addr_none
+	 Each of those messages costs fwd_fee
+	 In this case we test scenario where both messages required to be sent but balance has funs only for single message
+	 To do so resp_dst has be a valid address not equal to addr_none
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	{-
+	 Now we test if contract takes forward fee into account by adding forward fee to the incoming message
+	 Contract balance would be 1TON + storage_fee and fwd_fee would be 0.01 TON
+	 Should fail with no actions
+	-}
+
+	int forward_fee	  = one_ton / 100;
+	int balance	  = one_ton + min_storage + muldiv(forward_fee, 3, 2);
+
+	builder msg_body  = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), one_ton, null(), 0 );
+
+	cell msg 	  = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), forward_fee);
+
+	int gas_used	  = invoke_method_expect_fail( recv_internal, [ balance, 0, msg, msg_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;; Let's verify that double forward fee was an error trigger by increasing balance by another forward_fee
+	;; Expect success
+
+	( int gas_success, _ ) = invoke_method( recv_internal, [ balance + muldiv(forward_fee, 3, 2), 0, msg, msg_body.end_cell().begin_parse() ] );
+
+
+	return gas_used;
+}
+
+int __test_success_no_forward_no_reponse() {
+
+	{-
+	 forward_amount:0 resp_dst:addr_none
+	 On successfull execution only address change should occur.
+	 Expect no messages to be sent.
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( false );
+
+	builder msg_body = generate_nft_transfer_request( new_owner, resp_dst, 12345, null(), 0, null(), 0 );
+	cell msg 	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), 0 );
+
+	(int gas_used, _ )  = invoke_method( recv_internal, [ one_ton, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Owner address has to be changed to the new_owner
+	throw_unless( 100, equal_slices( get_owner_addr(), new_owner ) );
+
+	;; resp_dst is addr_none and no forward_amount, so no message should be generated
+	assert_no_actions();
+
+	return gas_used;
+
+}
+
+;; Transfer ownership success cases
+
+int __test_transfer_success_forward_no_response() {
+
+	{-
+	forward_amount:1TON resp_dst: addr_none balance:10TON
+	forward_payload:"Hop hey!"
+	On successfull execution expect:
+	1) Address change to new owner
+	2) Single ownership_assigned message is sent to new_owner addr with forward_amount attached
+	TL-B schema: ownership_assigned#05138d91 query_id:uint64 prev_owner:MsgAddress
+	forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+	query_id should be equal with request's query_id.
+
+	forward_payload should be equal with request's forward_payload.
+
+	prev_owner is address of the previous owner of this NFT item.
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( false );
+
+	int forward_fee         = one_ton / 100;
+	int forward_amount	= one_ton;
+	int balance 	        = one_ton * 10;
+	int query_id	        = rand( 1337 ) + 1;
+	builder forward_payload = begin_cell().store_slice("Hop hey!");
+
+
+	builder msg_body = generate_nft_transfer_request( new_owner, resp_dst, query_id,  null(), forward_amount, forward_payload.end_cell(), 0);
+	cell msg 	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), forward_fee );
+
+	(int gas_used, _ )    = invoke_method( recv_internal, [ balance, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Owner address has to be changed to the new_owner
+	throw_unless( 100, equal_slices( get_owner_addr(), new_owner ) );
+
+	tuple actions = parse_c5(); ;; test-libs/c5_parse_helpers.func
+
+	int actions_count = actions.tuple_length();
+
+	;; Only one message should be sent
+	throw_unless( 500 + actions_count, actions_count == 1 );
+
+	( int action_type, cell body, int mode ) = actions.at(0).untriple();
+
+	;; Action has to be action_send_msg
+	throw_unless( 600, action_type == 0);
+
+	verify_ownership_assigned( query_id, owner_addr, new_owner, forward_amount, forward_payload.end_cell().begin_parse(), body  );
+
+
+	return gas_used;
+}
+
+int __test_transfer_success_forward_with_response() {
+
+	{-
+	forward_amount:1TON resp_dst: addr_none balance:10TON
+	forward_payload:"Hop hey!"
+	On successfull execution expect:
+	1) Address change to new owner
+	2) Single ownership_assigned message is sent to new_owner addr with forward_amount attached
+	TL-B schema: ownership_assigned#05138d91 query_id:uint64 prev_owner:MsgAddress
+	forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+	query_id should be equal with request's query_id.
+
+	forward_payload should be equal with request's forward_payload.
+
+	prev_owner is address of the previous owner of this NFT item.
+
+	3) Single excesses message to resp_dst
+	TL-B schema: excesses#d53276db query_id:uint64 = InternalMsgBody;
+
+	For second message to be sent resp_dst should be valid address not equal to addr_none
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	int forward_fee         = one_ton / 100;
+	int forward_amount	    = one_ton;
+	int balance 	        = one_ton * 10;
+	int query_id	        = rand( 1338 ) + 1;
+	builder forward_payload = begin_cell().store_slice("Hop hey!");
+
+
+	builder msg_body = generate_nft_transfer_request( new_owner, resp_dst, query_id,  null(), forward_amount, forward_payload.end_cell(), 0);
+	cell msg 	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), forward_fee );
+
+	;;Attach 5 TONs to message value to test excess
+	(int gas_used, _ )    = invoke_method( recv_internal, [ balance, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Owner address has to be changed to the new_owner
+	throw_unless( 100, equal_slices( get_owner_addr(), new_owner ) );
+
+	tuple actions = parse_c5(); ;; test-libs/c5_parse_helpers.func
+
+	int actions_count = actions.tuple_length();
+
+	;; Two messages should be sent
+	throw_unless( 500 + actions_count, actions_count == 2 );
+
+	( int action_type, cell body, int mode ) = actions.at(0).untriple();
+
+	;; Action has to be action_send_msg
+	throw_unless( 600, action_type == 0);
+
+	verify_ownership_assigned( query_id, owner_addr, new_owner, forward_amount, forward_payload.end_cell().begin_parse(), body  );
+
+	( action_type, body, mode ) = actions.at( 1 ).untriple();
+
+	throw_unless( 700, action_type == 0);
+
+	verify_excess_sent( query_id, resp_dst, balance, muldiv(forward_fee, 3, 2), forward_amount, body );
+
+	return gas_used;
+}
+
+
+int __test_transfer_success_response_only() {
+
+	{-
+	forward_amount:0 TON resp_dst: valid address balance:10TON
+	forward_payload:"Hop hey!"
+	On successfull execution expect:
+	1) Address change to new owner
+	2) Single excesses message to resp_dst
+	TL-B schema: excesses#d53276db query_id:uint64 = InternalMsgBody;
+
+	For second message to be sent resp_dst should be valid address not equal to addr_none
+	-}
+
+	var ( owner_addr, new_owner, resp_dst ) = setup_transfer_addresses( true );
+
+	int forward_fee         = one_ton / 100;
+	int forward_amount	= 0;
+	int balance 	        = one_ton * 10;
+	int query_id	        = rand( 1337 ) + 1;
+	builder forward_payload = begin_cell().store_slice("Hop hey!");
+
+
+	builder msg_body = generate_nft_transfer_request( new_owner, resp_dst, query_id,  null(), forward_amount, forward_payload.end_cell(), 0);
+	cell msg 	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner_addr, null(), forward_fee );
+
+	(int gas_used, _ )    = invoke_method( recv_internal, [ balance, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Owner address has to be changed to the new_owner
+	throw_unless( 100, equal_slices( get_owner_addr(), new_owner ) );
+
+	tuple actions = parse_c5(); ;; test-libs/c5_parse_helpers.func
+
+	int actions_count = actions.tuple_length();
+
+	;; Only one message should be sent
+	throw_unless( 500 + actions_count, actions_count == 1 );
+
+	( int action_type, cell body, int mode ) = actions.at(0).untriple();
+
+	;; Action has to be action_send_msg
+	throw_unless( 600, action_type == 0);
+
+	verify_excess_sent( query_id, resp_dst, balance, muldiv(forward_fee, 3, 2), forward_amount, body );
+
+	return gas_used;
+}
+
+;;get_static_data test cases
+
+int __test_get_static_data() {
+	{-
+	Sends get_static_data request.
+	Expect success.
+	On success execution expect:
+	1) Single report_static_data message received
+	2) Message send mode is 64
+	3) query_id matches query_id in request
+	4) Message has 256 bit index value
+	5) Message has valid collection_address matching c4 collection_addr
+	-}
+
+	int query_id = rand( 1337 ) + 1;
+
+	var ( idx, coll_addr, owner, _ ) = load_test_data();
+	builder msg_body = generate_nft_get_static_data_request( query_id );
+	cell msg	 = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	( int gas_used, _ ) = invoke_method( recv_internal,[ one_ton * 10, 0, msg, msg_body.end_cell().begin_parse() ] );
+
+	tuple actions	 = parse_c5();
+
+	throw_unless( 800, actions.tuple_length() == 1 );
+
+	( int action_type, cell body, int mode ) = actions.at(0).untriple();
+
+	throw_unless( 801, action_type == 0 );
+
+	throw_unless( 802, mode == 64 );
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( body ) );
+	slice ds 	 = parsed_msg.at( 8 );
+
+	( int op, int resp_query_id ) = ( ds~load_uint( 32 ), ds~load_uint( 64 ) );
+
+	throw_unless( 803, op_report_static_data == op );
+
+	throw_unless( 804, query_id == resp_query_id );
+
+	throw_unless( 805, idx == ds~load_uint( 256 ) );
+
+	throw_unless( 806, equal_slices( coll_addr, ds~load_msg_addr() ) );
+
+	return gas_used;
+}
+
+;; Get methods test
+
+int __test_get_nft_data() {
+	;; (int init?, int index, slice collection_address, slice owner_address, cell individual_content)
+
+	var ( idx, coll_addr, owner, content ) = load_test_data();
+
+	( int gas_used, tuple stack ) = invoke_method( get_nft_data, [] );
+
+	;;Check that argument count match signature
+
+	throw_unless( 300, stack.tuple_length() == 5 );
+	int init? = stack.first();
+	int res_idx = stack.second();
+	slice res_collection = stack.third();
+	slice res_owner      = stack.fourth();
+	cell  res_content    = stack.at( 4 );
+
+	;; Check that initialized NFT can't have empty owner_address
+	;; And the other way around
+	throw_unless( 301, ( init? ^ res_owner.null?() ) );
+
+	;; Check that contract correctly loads data
+	throw_unless( 302, equal_slices( owner, res_owner ) );
+	throw_unless( 303, equal_slices( coll_addr, res_collection ) );
+
+	slice content_data = res_content.begin_parse();
+
+	throw_unless( 304, equal_slices( content.begin_parse(), content_data ) );
+
+	;; Only collection-less NFT have to comply with TIP-64
+	;; Such NFT items have addr_none as collection_address
+	if( equal_slices( res_owner, generate_empty_address() ) ){
+
+		int content_layout = content_data~load_uint( 8 );
+
+		;; Check for allowed content_layout
+		throw_unless( 305, ( content_layout  == 1 ) | ( content_layout == 0 ) );
+
+
+		if( content_layout == 1 ){
+
+			;; Check that off-chain URI contains at least one ASCII char
+			throw_unless( 306, token_snake_len( content_data ) > 8 );
+		} else {
+			;; On-chain is stored as dict
+			;; Has to be non-empty
+			throw_if( 306, content_data.preload_dict().dict_empty?() );
+
+			;; Perhaps could go further and test for Optional dict keys but none of those is required so i'll leave it be
+		}
+	}
+
+
+	return gas_used;
+}

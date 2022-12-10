@@ -1,0 +1,33 @@
+"TonUtil.fif" include
+
+"EQDlT07NpSh0uj-aSBkF2TRxOqR2nw0ErOQsA6TYakr1-FxP" constant mint_address
+0x178d4519 constant internal_transfer
+1000000000 10 * constant mint_amount 
+30000000 constant forward_amount
+
+mint_address
+$>smca 0= abort"Specify valid mint addr"
+drop  // Drop flags
+
+2constant mint_raw // worchain and addr into single constant
+
+// Here goes master message
+// internal_transfer
+
+<b
+  internal_transfer 32 u, // op internal_transfer
+  4321 64 u, // query_id
+  mint_amount Gram, // 10 jettons
+  mint_raw Addr, // From addr
+  0 2 u, // addr_none for simplicity Address vwhere transfer notification would be sent
+  0 Gram, // No address no forward
+  0 1 u, // normal forward payload
+b>
+
+<b
+  21 32 u, // op mint
+  1234 64 u, // query_id
+  mint_raw Addr,
+  forward_amount Gram,
+  swap ref, // master message ref
+b>

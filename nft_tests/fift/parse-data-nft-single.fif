@@ -1,0 +1,22 @@
+"TonUtil.fif" include
+"Color.fif" include
+
+// In stack: init?, index,  collection address, owner_address, body
+4 roll // In stack: index,  collection address, owner_address, body, init?
+^reset ."👋 NFT is inited: " ^magenta (dump) type cr
+
+3 roll // In stack: collection address, owner_address, body, index
+constant index
+^reset ."👿 NFT index: " ^green index (dump) type cr
+
+
+^reset 2 roll addr@ ."🤗 Collection address: " ^yellow print-addr cr // In stack: owner_address, body, collection address SLICE
+constant nft-body
+^reset ."🤯 NFT Body: " nft-body <s ^cyan (dump) type cr //  In stack: owner_address, collection address SLICE, body SLICE
+^reset ."👻 NFT owner: "  addr@ ^green  print-addr cr //  In stack: collection address SLICE, body SLICE, owner_address SLICE
+
+nft-body <s
+^reset ."🤪 NFT type tag: " 8 u@+ swap  ^green (dump) type cr
+^reset ."😏 NFT individual content: " dup sbits 8 / B@ dup constant nft-data ^green  (dump) type cr
+^reset ."😏 NFT individual content parsed: " nft-data B>$ (dump) type cr
+

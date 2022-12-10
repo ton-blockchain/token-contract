@@ -1,0 +1,204 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+#include "utils/op-codes.fc";
+
+(int, slice, cell, cell) load_test_data() inline {
+  slice ds = get_data().begin_parse();
+  return (
+      ds~load_coins(), ;; total_supply
+      ds~load_msg_addr(), ;; admin_address
+      ds~load_ref(), ;; content
+      ds~load_ref()  ;; jetton_wallet_code
+  );
+}
+
+_ verify_excess_jetton( int query_id, slice resp_dst, int msg_value, int forward_fee, int forward_amount, cell msg ) impure inline {
+	{-
+	TL-B schema: excesses#d53276db query_id:uint64 = InternalMsgBody;
+	Excess message should be sent to resp_dst with all of the msg_value - fees taken to process
+	We verify that:
+	1) message is sent to resp_dst
+	2) attached amount is at least msg_value - forward_fee * 2
+	3) op matches excess op
+	4) query_id matches request query_id
+	-}
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( msg ) );
+
+	;;Check dst_addr to be equal to resp_dst
+	throw_unless( 701, equal_slices( resp_dst, parsed_msg.at( 4 ) ) );
+
+	int total_sent  = parsed_msg.at( 5 );
+	int should_sent = msg_value - forward_amount - forward_fee * 2;
+
+	throw_unless( 702, total_sent >= should_sent );
+
+	slice msg_body = parsed_msg.at( 8 );
+
+	throw_unless( 703, op_excesses == msg_body~load_uint( 32 ) );
+
+	throw_unless( 704, query_id == msg_body~load_uint( 64 ) );
+}
+
+_ validate_TIP_64( slice content_data ) impure inline {
+
+	int content_layout = content_data~load_uint( 8 );
+
+	;; Check for allowed content_layout
+	throw_unless( 305, ( content_layout  == 1 ) | ( content_layout == 0 ) );
+
+	if( content_layout == 1 ){
+
+		;; Check that off-chain URI contains at least one ASCII char
+		throw_unless( 306, token_snake_len( content_data ) > 8 );
+	} else {
+		;; On-chain is stored as dict
+		;; Has to be non-empty
+		throw_if( 306, content_data.preload_dict().dict_empty?() );
+
+		;; Perhaps could go further and test for Optional dict keys but none of those are required so i'll leave it be
+		;; For now
+	}
+}
+
+int __test_burn_notification() {
+	{-
+	  burn_notification query_id:uint64 amount:(VarUInteger 16)
+	       sender:MsgAddress response_destination:MsgAddress
+	       = InternalMsgBody;
+
+	  On receiving burn notification jetton master should
+	  1) Decrease total supply by burn_amount.
+	  2) Send excess message to the response_destination.
+
+	-}
+	var ( total_supply, admin_address, content, code ) = load_test_data();
+
+	int query_id = rand( 1337 ) + 1;
+	int burn_amount = total_supply / 10;
+	;; Making sure that source address would be valid jetton address
+
+	slice sender    = generate_internal_address_with_custom_data( 0, 0, random() );
+	slice src	= calculate_user_jetton_wallet_address( sender, my_address(), code );
+	var msg_body    = generate_jetton_burn_notification( query_id, burn_amount, sender, admin_address );
+	cell msg        = generate_internal_message_custom( 0, 0, 0, msg_body, src, null(), 0);
+
+	( int gas_used, _ ) = invoke_method( recv_internal, [one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	;; Expect single message
+	tuple actions	    = parse_c5();
+	throw_unless( 600, actions.tuple_length() == 1 );
+
+	( int action_type, cell sent_msg, int mode ) = actions.at(0).untriple();
+	throw_unless( 601, action_type == 0 );
+	throw_unless( 602, ( mode >= 64 ) & ( mode <= 66 ) );
+
+	;; it's mode 64 so msg_value - fees return guaranteed
+	;; Still have to verify excess structure
+
+	verify_excess_jetton( query_id, admin_address, 0, 0, 0, sent_msg );
+
+	var( new_supply, _, _, _ ) = load_test_data();
+
+	throw_unless( 603, total_supply - burn_amount == new_supply );
+
+
+	return gas_used;
+}
+
+int __test_mint() {
+
+	;;Non-standardized but widely used message
+	var ( total_supply, admin_address, content, code ) = load_test_data();
+
+	int query_id     = rand(1337) + 1;
+	int forward_ton  = one_unit / 10;
+	int mint_amount  = ( rand( 100 ) + 1 ) * one_unit / 10;
+	slice rand_addr  = generate_internal_address_with_custom_data(0, 0, random());
+	slice mint_dst   = generate_internal_address_with_custom_data(0, 0, random());
+	slice mint_from  = generate_empty_address();
+
+	{-
+		In current implementation sends any forward payload provided.
+		However for jettons to be successfully creditated on wallet balance
+		it should have internal_transfer message format.
+	-}
+
+	cell mint_payload = generate_jetton_internal_transfer_request( query_id, mint_amount, mint_from, rand_addr, forward_ton, null(), false ).end_cell();
+	builder mint_body = generate_internal_message_body( op_mint, query_id ).store_slice( mint_dst ).store_grams( forward_ton ).store_ref( mint_payload );
+	;; Testing mint with non-admin address
+	cell msg          = generate_internal_message_custom( 0, 0, 0,  mint_body, rand_addr, null(), 0 );
+
+	int gas_failed    = invoke_method_expect_fail( recv_internal, [ one_unit, one_unit, msg, mint_body.end_cell().begin_parse() ] );
+	assert_no_actions();
+
+	;;Now changing source address to admin
+	msg               = generate_internal_message_custom( 0, 0, 0,  mint_body, admin_address, null(), 0 );
+
+	var( gas_success, _ ) = invoke_method( recv_internal, [ one_unit, one_unit, msg, mint_body.end_cell().begin_parse() ] );
+
+	;; Expect single message
+	tuple actions	    = parse_c5();
+	throw_unless( 600, actions.tuple_length() == 1 );
+
+	( int action_type, cell sent_msg, int mode ) = actions.at(0).untriple();
+	throw_unless( 601, action_type == 0 );
+
+	tuple parsed_msg = unsafe_tuple( parse_internal_message( sent_msg ) );
+
+	{-
+	  What do we know about how mint message should look like in general?
+	  1) Wallet has to be deployed thus StateInit has to be present
+	  2) Our forward payload should be the message body
+	  That's what we're going to check for.
+	  Rest is very contract specific.
+	-}
+
+	throw_if( 602, parsed_msg.at( 7 ).null?() );
+	throw_unless( 603, equal_slices( mint_payload.begin_parse(), parsed_msg.at( 8 ) ) );
+
+	;; Also total supply should increase by mint_amount
+
+	var( new_supply, _, _, _ ) = load_test_data();
+	throw_unless( 604, total_supply + mint_amount == new_supply );
+
+	return gas_failed + gas_success;
+
+}
+
+;; Get methods tests start here
+
+int __test_get_jetton_data() {
+
+	int expect_mintable? = true; ;;Determines if test expects mintable contract
+
+	var ( total_supply, admin_address, content, code ) = load_test_data();
+
+	var ( gas_used, stack ) = invoke_method( get_jetton_data, [] );
+
+	throw_unless( 500, stack.tuple_length() == 5 );
+
+	throw_unless( 501, total_supply == stack.first() );
+	throw_unless( 502, expect_mintable? & stack.second() );
+	throw_unless( 503, equal_slices( admin_address, stack.third() ) );
+
+	slice res_cs = stack.fourth().begin_parse(); ;; Content slice
+
+	throw_unless( 504, equal_slices( content.begin_parse(), res_cs ) );
+	validate_TIP_64( res_cs );
+	throw_unless( 505, equal_slices( code.begin_parse(), stack.at( 4 ).begin_parse() ) );
+
+	return gas_used;
+}
+
+int __test_get_wallet_address() {
+
+	var ( gas_used, stack ) = invoke_method( get_wallet_address, [ my_address() ] );
+
+	throw_unless( 700, stack.tuple_length() == 1 );
+
+	parse_std_addr( stack.first() ); ;;I guess that's what else we can check
+
+	return gas_used;
+}

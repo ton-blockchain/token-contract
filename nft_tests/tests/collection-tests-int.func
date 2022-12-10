@@ -1,0 +1,94 @@
+#pragma version >=0.2.0;
+
+#include "utils/collection-data.func";
+#include "utils/constants.func";
+
+
+int __test_get_collection_data_deploy() {
+	var ( gas_before, stack ) = invoke_method( get_collection_data, [] );
+
+	int idx_next       = stack.first();
+	int forward_amount = one_ton / 10;
+	int query_id       = rand( 1337 ) + 1;
+	cell coll_content  = stack.second();
+	slice owner        = stack.third();
+
+	cell nft_content   = begin_cell().store_slice("my_nft.json").end_cell();
+	cell nft_init      = begin_cell().store_slice(owner).store_ref(nft_content).end_cell();
+
+	builder msg_body   = generate_nft_deploy_request( idx_next, nft_init, query_id, forward_amount);
+	cell msg           = generate_internal_message_custom(0, 0, 0, msg_body, owner, null(), 0);
+	
+	var ( gas_deploy, _ )    = invoke_method(recv_internal, [one_ton, one_ton, msg, msg_body.end_cell().begin_parse()]);
+	var ( gas_after, stack ) = invoke_method( get_collection_data, [] );
+	;;Index should increase by one
+	throw_unless( 500, stack.first() == idx_next + 1 );
+
+	;; Nothing should change here
+	throw_unless( 501, equal_slices( coll_content.begin_parse(), stack.second().begin_parse() ) );
+	throw_unless( 502, equal_slices( owner, stack.third() ) );
+
+	return gas_before + gas_after + gas_deploy;
+}
+
+int __test_get_collection_data_change_owner() {
+
+	var ( gas_before, stack ) = invoke_method( get_collection_data, [] );
+
+	int query_id       = rand( 1337 ) + 1;
+	int change_owner   = 3; ;;WARNING contract dependent value.
+	slice owner        = stack.third();
+	slice new_owner    = generate_internal_address_with_custom_data(0, 0, random());
+	builder msg_body   = generate_internal_message_body( change_owner, query_id ).store_slice( new_owner );
+	cell    msg        = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_change, _ )    = invoke_method( recv_internal, [one_ton, one_ton, msg, msg_body.end_cell().begin_parse()] );
+	var ( gas_after, stack ) = invoke_method( get_collection_data, [] );
+
+	throw_unless( 500, equal_slices( new_owner, stack.third() ) );
+
+	return gas_before + gas_change + gas_after;
+}
+
+int __test_get_nft_address_by_index() {
+
+    slice owner = get_owner();
+
+    ;; To test that nft address is correct
+    ;; we have to deploy one first and capture it's address
+    ;; Index:0
+
+    cell nft_content = begin_cell().store_slice("my_nft.json").end_cell();
+    cell nft_init    = begin_cell().store_slice(owner).store_ref(nft_content).end_cell();
+
+    int query_id = rand(1337) + 1;
+    int forward_amount = one_ton / 10;
+    int deploy_idx = 0;
+
+    builder msg_body = generate_nft_deploy_request(deploy_idx, nft_init, query_id, forward_amount);
+    cell msg = generate_internal_message_custom(0, 0, 0, msg_body, owner, null(), 0);
+
+    (int gas_used, _) = invoke_method(recv_internal, [one_ton, 0, msg, msg_body.end_cell().begin_parse()]);
+    ;; Should successfully deploy and produce singe deployment message
+
+    tuple actions = parse_c5();
+    throw_unless(500, actions.tuple_length() == 1);
+
+    (int action_type, cell body, int mode) = actions.at(0).untriple();
+    throw_unless(501, action_type == 0);
+
+    tuple parsed_msg = unsafe_tuple(parse_internal_message(body));
+
+    ;;Picking nft address from deployment message
+    slice nft_address = parsed_msg.at(4);
+
+    var (gas_used2, stack) = invoke_method(get_nft_address_by_index, [deploy_idx]);
+
+    throw_unless(502, stack.tuple_length() == 1);
+
+    throw_unless(503, equal_slices(nft_address, stack.first()));
+
+
+    return gas_used;
+}
+

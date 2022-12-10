@@ -1,0 +1,273 @@
+#pragma version >=0.2.0;
+
+#include "utils/collection-data.func";
+#include "utils/constants.func";
+#include "../func/utils/op-codes.func";
+
+
+;; Pretty unpleasent tuple to work with.
+;; Flags are mixed up with data that is not always inserted
+
+cell get_state_init_field(tuple state_init, int idx) inline {
+    cell res = null();
+    ;; Next flag index
+    int next_idx = 0;
+
+    do {
+        int flag = state_init.at(next_idx);
+
+        next_idx = flag ? next_idx + 2 : next_idx + 1;
+        idx -= 1;
+
+        if(idx == 0 & flag) {
+            res = state_init.at(next_idx - 1);
+        }
+
+    } until (~ res.null?() | idx <= 0)
+
+    return res;
+}
+
+_ validate_TIP_64(slice content_data) impure inline {
+
+    int content_layout = content_data~load_uint(8);
+
+    ;; Check for allowed content_layout
+    throw_unless(305, (content_layout == 1) | (content_layout == 0));
+
+    if(content_layout == 1) {
+
+        ;; Check that off-chain URI contains at least one ASCII char
+        throw_unless(306, token_snake_len(content_data) > 8);
+    } else {
+        ;; On-chain is stored as dict
+        ;; Has to be non-empty
+        throw_if(306, content_data.preload_dict().dict_empty?());
+
+        ;; Perhaps could go further and test for Optional dict keys but none of those are required so i'll leave it be
+        ;; For now
+    }
+}
+
+int __test_change_owner() {
+
+	{-
+	  This method is not defined in TIP-62.
+	  Still this is de-facto standard.
+	  One could argue that this one should
+	  be moved elsewhere.
+	-}
+
+	var (owner_address, prev_item_index, content, nft_item_code, royalty_params) = load_test_data(); ;; this data will load from c4
+
+	int change_owner = 3; ;;Change owner op could be different
+	int query_id     = rand(1337) + 1;
+	slice rand_addr  = generate_internal_address_with_custom_data(0, 0, random());
+	;;Setting this random address as new collection owner.
+	builder msg_body = generate_internal_message_body( change_owner, query_id ).store_slice( rand_addr );
+	cell  msg        = generate_internal_message_custom( 0, 0, 0, msg_body, rand_addr, null(), 0 );
+
+	;; Should fail from non-owner address
+	int gas_failed   = invoke_method_expect_fail( recv_internal, [one_ton, one_ton, msg, msg_body.end_cell().begin_parse()] );
+
+	;;With correct owner it should succeed
+	msg              = generate_internal_message_custom( 0, 0, 0, msg_body, owner_address, null(), 0 );
+	var ( gas_success, _ ) = invoke_method( recv_internal, [one_ton, 0, msg, msg_body.end_cell().begin_parse()] );
+
+	throw_unless( 500, equal_slices( rand_addr, get_owner() ) );
+
+
+	return gas_success + gas_failed;
+}
+
+int __test_deploy_item() {
+	{-
+	 Collection deployment behaviour is not really defined in TIP-62
+	 Besides get methods.
+	 Still have to test that it at least barely works right?
+	 Will test:
+
+	 1) Will test just that it won't allow deployment from non-owner
+	 2) Successfull deployment increases index and sends apropriate msgs
+	-}
+
+    var (owner_address, prev_item_index, content, nft_item_code, royalty_params) = load_test_data(); ;; this data will load from c4
+
+    slice rand_addr = generate_internal_address_with_custom_data(0, 0, random());
+
+	{-
+	  This is not the actual content format required for successfull deployment.
+	  Contrant will accept it and i think it's something to fix
+	  cell nft_content    = begin_cell().store_uint( 1, 8 ).store_slice("my_nft.json").end_cell();
+	-}
+
+    cell nft_content = begin_cell().store_slice("my_nft.json").end_cell();
+    ;; That's what actually should be sent for successfull deployment
+    cell nft_init = begin_cell().store_slice(owner_address).store_ref(nft_content).end_cell();
+    int query_id = rand(1337) + 1;
+    int forward_amount = one_ton / 10;
+    builder msg_body = generate_nft_deploy_request(0, nft_init, query_id, forward_amount);
+    cell msg = generate_internal_message_custom(0, 0, 0, msg_body, rand_addr, null(), 0);
+    ;; Should not allow deploy from non-owner address
+    int gas_used = invoke_method_expect_fail(recv_internal, [one_ton, 0, msg, msg_body.end_cell().begin_parse()]);
+    assert_no_actions();
+    ;; Verify that non-owner address was error trigger
+    ;; Expect success
+
+    cell msg = generate_internal_message_custom(0, 0, 0, msg_body, owner_address, null(), 0);
+    (int gas_success, _) = invoke_method(recv_internal, [one_ton, 0, msg, msg_body.end_cell().begin_parse()]);
+
+    tuple actions = parse_c5();
+
+    throw_unless(500, actions.tuple_length() == 1);
+
+    (int action_type, cell body, int mode) = actions.at(0).untriple();
+
+    throw_unless(501, action_type == 0);
+
+    tuple parsed_msg = unsafe_tuple(parse_internal_message(body));
+
+    throw_unless(502, forward_amount == parsed_msg.at(5));
+
+    tuple state_init = parsed_msg.at(7);
+
+    ;; Deployment message has to have state_init
+    int state_len = state_init.tuple_length();
+
+    throw_unless(503, state_len > 0);
+
+    ;; Fourth flag is data segment of state_init
+
+    cell init_data = state_init.get_state_init_field(4);
+
+    ;; Data segment has to be present in ntf StateInit
+
+    throw_if(504, init_data.null?());
+
+    ;; Content in message body should be equal to what we sent
+
+    throw_unless(505, equal_slices(nft_init.begin_parse(), parsed_msg.at(8)));
+
+    ;; Nft index has to increase
+
+    throw_unless(506, get_nft_index() > prev_item_index);
+
+    return gas_used + gas_success;
+}
+
+int __test_royalty_msg () {
+
+	( int numirator, int denominator, slice dst ) = get_test_royalty(); ;;Could be load_test_royalty
+
+	int query_id        = rand( 1337 ) + 1;
+	slice src_addr	    = generate_internal_address_with_custom_data( 0, 0, random() );
+	builder msg_body    = generate_get_royalty_params( query_id );
+	cell msg	    = generate_internal_message_custom( 0, 0, 0, msg_body, src_addr, null(), 0 );
+	( int gas_used, _ ) = invoke_method( recv_internal, [ one_ton, one_ton, msg, msg_body.end_cell().begin_parse() ] );
+	tuple actions       = parse_c5();
+
+	throw_unless( 500, actions.tuple_length() == 1 );
+
+	( int action_type, cell body, int mode ) = actions.first().untriple();
+	throw_unless( 501, action_type == 0 );
+	throw_unless( 502, mode == 64 );
+
+
+	tuple parsed_msg    = unsafe_tuple( parse_internal_message(body) );
+
+	;;Message is sent back
+	throw_unless( 503, equal_slices( src_addr, parsed_msg.at( 4 ) ) );
+
+	slice msg_body      = parsed_msg.at( 8 );
+	throw_unless( 504, op_report_royalty_params == msg_body~load_uint( 32 ) );
+	throw_unless( 505, query_id == msg_body~load_uint( 64 ) );
+	throw_unless( 506, numirator == msg_body~load_uint( 16 ) );
+	throw_unless( 507, denominator == msg_body~load_uint( 16 ) );
+	throw_unless( 508, equal_slices( dst, msg_body~load_msg_addr() ) );
+
+
+	return gas_used;
+}
+
+;; Get methods test cases
+
+int __test_get_collection_data() {
+
+    var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_test_data();
+
+    var (gas_used, stack) = invoke_method(get_collection_data, []);
+    ;; Should return 3 values
+
+    throw_unless(600, stack.tuple_length() == 3);
+
+    ;; Index, content and owner address should equal to c4
+
+    int res_idx = stack.first();
+    throw_unless(601, next_item_index == res_idx);
+
+    ;; First ref of a content is returned
+    ;; Collection content
+
+    cell  res_content  = stack.second();
+    slice cont_slice   = content.begin_parse();
+    cell  coll_content = cont_slice~load_ref();
+
+    throw_unless(602, equal_slices(coll_content.begin_parse(), res_content.begin_parse()));
+
+    slice res_owner    = stack.third();
+    throw_unless(603, equal_slices(owner_address, res_owner));
+
+    ;; Let's check that CollectionContent is compliant to TIP-64
+
+    validate_TIP_64(coll_content.begin_parse());
+
+
+    return gas_used;
+}
+
+
+int __test_get_nft_content() {
+
+	;;Is there anything to be integrationally tested here?
+	;;Probably not
+
+    var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_test_data();
+    slice coll_slice = content.begin_parse();
+    cell nft_content = begin_cell().store_slice("my_nft.json").end_cell();
+
+    (_, cell collection_comm) = (coll_slice~load_ref(), coll_slice~load_ref());
+    cell concat_content = snake_concat_tagged(1, collection_comm, nft_content);
+
+    var (gas_used, stack) = invoke_method(get_nft_content, [0, nft_content]);
+
+    cell  res = stack.at(0);
+    slice res_slice = res.begin_parse();
+
+    throw_unless(601, snake_equal?(concat_content.begin_parse(), res_slice));
+
+    ;; Has to comply with TIP-64
+    validate_TIP_64(res_slice);
+
+    return gas_used;
+
+}
+
+{-
+  get_nft_address_by_index requires deployed nft item.
+  Thus it has been moved to integrational tests.
+-}
+
+int __test_royalty_params() {
+
+        var ( gas_used, stack ) = invoke_method( royalty_params, [] );
+
+        throw_unless( 700, stack.tuple_length() == 3 );
+        throw_unless( 701, is_int( stack.first() ) );
+        throw_unless( 702, is_int( stack.second() ) );
+        throw_unless( 703, is_slice( stack.third() ) );
+
+        parse_std_addr( stack.third() );
+
+        return gas_used;
+}
+

@@ -1,0 +1,24 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+
+int __test_get_nft_data_transfer() {
+	;; (int init?, int index, slice collection_address, slice owner_address, cell individual_content)
+
+	var ( _ , new_owner, resp_dst ) = setup_transfer_addresses( false );
+	var ( gas_before, stack )       = invoke_method( get_nft_data, [] );
+
+	slice owner      = stack.fourth();
+	int query_id     = rand( 1337 ) + 1;
+	builder msg_body = generate_nft_transfer_request( new_owner, resp_dst, query_id,  null(), 0, null(), 0);
+	cell msg 	     = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_transfer, _ )  = invoke_method( recv_internal, [ one_ton, one_ton, msg, msg_body.end_cell().begin_parse() ] );
+	var ( gas_after, stack ) = invoke_method( get_nft_data, [] );
+
+	throw_unless( 500, equal_slices( new_owner, stack.fourth() ) );
+
+
+	return gas_before + gas_transfer + gas_after;
+}
+

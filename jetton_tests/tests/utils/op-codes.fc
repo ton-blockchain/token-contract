@@ -1,0 +1,9 @@
+const int op_transfer = 0xf8a7ea5;
+const int op_transfer_notification = 0x7362d09c;
+const int op_internal_transfer = 0x178d4519;
+const int op_excesses = 0xd53276db;
+const int op_burn = 0x595f07bc;
+const int op_burn_notification = 0x7bdd97de;
+
+;; Minter
+const int op_mint = 21;

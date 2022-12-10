@@ -1,0 +1,118 @@
+#pragma version >=0.2.0;
+
+#include "utils/constants.func";
+
+
+int __test_get_wallet_data_transfer() {
+
+	var ( _, dst, resp_dst, query_id ) = setup_req_fields();
+	var ( gas_before, stack )          = invoke_method( get_wallet_data, [] );
+
+	int balance  = stack.first();
+	slice owner  = stack.second();
+	slice master = stack.third();
+	cell code    = stack.fourth();
+
+	;; Nothing to send
+
+	if( balance <= 0 ) {
+		return gas_before; ;;throw( 100 ) ?
+	}
+
+	int transfer_amount      = ( rand( 10 ) + 1 ) * balance / 10; ;; From 0.1 * balance to 1 * balance
+	int forward_amount       = one_unit / 10;
+	int forward_fee          = one_unit / 100;
+
+
+	builder msg_body         = generate_jetton_transfer_request( query_id, transfer_amount, dst,resp_dst, null(), forward_amount, null(), false );
+	cell    msg	             = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), forward_fee );
+
+	var ( gas_transfer, _ )  = invoke_method( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+	var ( gas_after, stack ) = invoke_method( get_wallet_data, [] );
+
+	int new_balance = stack.first();
+
+	throw_unless( 500, balance - transfer_amount == stack.first() );
+
+	;; Rest should not change
+	throw_unless( 501, equal_slices( owner, stack.second() ) );
+	throw_unless( 502, equal_slices( master, stack.third() ) );
+	throw_unless( 503, equal_slices( code.begin_parse(), stack.fourth().begin_parse() ) );
+
+
+	return gas_before + gas_transfer + gas_after;
+}
+
+int __test_get_wallet_internal_transfer() {
+
+	{-
+	 When incoming transfer happens
+	 Balance should increase accordingly
+	-}
+
+	var ( _, dst, resp_dst, query_id ) = setup_req_fields();
+	var ( gas_before, stack )          = invoke_method( get_wallet_data, [] );
+
+	int balance         = stack.first();
+	slice owner         = stack.second();
+	slice master        = stack.third();
+	cell code           = stack.fourth();
+
+
+	int transfer_amount = ( rand( 10 ) + 1 ) * one_unit / 10; ;;From 0.1 to 1 unit
+	int forward_ton     = one_unit / 10;
+	int msg_value       = one_unit;
+
+	var  msg_body       = generate_jetton_internal_transfer_request( query_id, transfer_amount, master, dst, forward_ton, null(), false );
+	cell msg            = generate_internal_message_custom( 0, 0, 0,  msg_body, master, null(), 0 );
+
+	var ( gas_transfer, _ )  = invoke_method( recv_internal, [ msg_value, msg_value, msg, msg_body.end_cell().begin_parse() ] );
+	var ( gas_after, stack ) = invoke_method( get_wallet_data, [] );
+
+	throw_unless( 500, balance + transfer_amount == stack.first() );
+	;; Rest should not change
+	throw_unless( 501, equal_slices( owner, stack.second() ) );
+	throw_unless( 502, equal_slices( master, stack.third() ) );
+	throw_unless( 503, equal_slices( code.begin_parse(), stack.fourth().begin_parse() ) );
+
+	return gas_before + gas_transfer + gas_after;
+}
+
+int __test_get_wallet_data_burn() {
+
+	var ( _, dst, resp_dst, query_id ) = setup_req_fields();
+	var ( gas_before, stack )          = invoke_method( get_wallet_data, [] );
+
+	int balance  = stack.first();
+	slice owner  = stack.second();
+	slice master = stack.third();
+	cell code    = stack.fourth();
+
+
+	;; Nothing to burn
+
+	if( balance <= 0 ) {
+		return gas_before; ;;throw( 100 ) ?
+	}
+
+	int burn_amount      = ( rand( 10 ) + 1 ) * balance / 10; ;; From 0.1 * balance to 1 * balance
+	int forward_amount   = one_unit / 10;
+	int forward_fee      = one_unit / 100;
+	var  msg_body        = generate_jetton_burn_request( query_id, burn_amount, resp_dst, null() );
+	cell msg             = generate_internal_message_custom( 0, 0, 0, msg_body, owner, null(), 0 );
+
+	var ( gas_burn, _ )  = invoke_method( recv_internal, [ one_unit, one_unit, msg, msg_body.end_cell().begin_parse() ] );
+
+	var ( gas_after, stack ) = invoke_method( get_wallet_data, [] );
+
+	throw_unless( 500, balance - burn_amount == stack.first() );
+
+	;; Rest should not change
+	throw_unless( 501, equal_slices( owner, stack.second() ) );
+	throw_unless( 502, equal_slices( master, stack.third() ) );
+	throw_unless( 503, equal_slices( code.begin_parse(), stack.fourth().begin_parse() ) );
+
+
+
+	return gas_before + gas_burn;
+}

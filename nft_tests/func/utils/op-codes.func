@@ -1,0 +1,12 @@
+const int op_transfer = 0x5fcc3d14;
+const int op_ownership_assigned = 0x05138d91;
+const int op_excesses = 0xd53276db;
+const int op_get_static_data = 0x2fcb26a2;
+const int op_report_static_data = 0x8b771735;
+const int op_get_royalty_params = 0x693d3950;
+const int op_report_royalty_params = 0xa8cb00ad;
+
+;; NFTEditable
+const int op_edit_content = 0x1a0b9d51;
+const int op_transfer_editorship = 0x1c04412a;
+const int op_editorship_assigned = 0x511a4463;

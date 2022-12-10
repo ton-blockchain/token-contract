@@ -1,0 +1,2 @@
+const int one_ton = 1000000000; ;;10^9
+const int min_storage = 50000000; ;; 0.05 TON minimal storage fee
