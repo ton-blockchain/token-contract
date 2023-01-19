@@ -16,8 +16,8 @@ int min_tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
 ;; Note that 2 * gas_consumptions is expected to be able to cover fees on both wallets (sender and receiver)
 ;; and also constant fees on inter-wallet interaction, in particular fwd fee on state_init transfer
 ;; that means that you need to reconsider this fee when:
-;; a) jetton logic become more costly
-;; b) jetton-wallet code become larger or smalle
+;; a) jetton logic become more gas-heavy
+;; b) jetton-wallet code (sent with inter-wallet message) become larger or smaller
 ;; c) global fee changes / different workchain
 int gas_consumption() asm "15000000 PUSHINT"; ;; 0.015 TON
 
