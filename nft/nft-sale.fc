@@ -97,11 +97,11 @@ int min_gas_amount() asm "1000000000 PUSHINT"; ;; 1 TON
 
     if (~ is_initialized) {
       
-      if (equal_slices(sender_address, marketplace_address)) {
+      if (equal_slice_bits(sender_address, marketplace_address)) {
          return (); ;; just accept coins on deploy
       }
 
-      throw_unless(500, equal_slices(sender_address, nft_address));
+      throw_unless(500, equal_slice_bits(sender_address, nft_address));
       int op = in_msg_body~load_uint(32);
       throw_unless(501, op == op::ownership_assigned());
       int query_id = in_msg_body~load_uint(64);
@@ -135,7 +135,7 @@ int min_gas_amount() asm "1000000000 PUSHINT"; ;; 1 TON
 
     if (op == 3) { ;; cancel sale
          throw_unless(457, msg_value >= min_gas_amount());
-         throw_unless(458, equal_slices(sender_address, nft_owner_address) | equal_slices(sender_address, marketplace_address));
+         throw_unless(458, equal_slice_bits(sender_address, nft_owner_address) | equal_slice_bits(sender_address, marketplace_address));
 
          var msg = begin_cell()
            .store_uint(0x10, 6) ;; nobounce

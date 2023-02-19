@@ -55,7 +55,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     .store_uint(op, 32)
     .store_uint(query_id, 64);
 
-  if (~ builder_null?(payload)) {
+  if (~ builder_depth(payload)) {
     msg = msg.store_builder(payload);
   }
 
@@ -63,7 +63,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 }
 
 () transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body, int fwd_fees) impure inline {
-    throw_unless(401, equal_slices(sender_address, owner_address));
+    throw_unless(401, equal_slice_bits(sender_address, owner_address));
 
     slice new_owner_address = in_msg_body~load_msg_addr();
     force_chain(new_owner_address);
@@ -116,7 +116,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 
     (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();
     if (~ init?) {
-      throw_unless(405, equal_slices(collection_address, sender_address));
+      throw_unless(405, equal_slice_bits(collection_address, sender_address));
       store_data(index, collection_address, in_msg_body~load_msg_addr(), in_msg_body~load_ref());
       return ();
     }
