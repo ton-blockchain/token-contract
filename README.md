@@ -2,7 +2,7 @@
 
 ## NFT (Non-Fungible tokens) in `nft` folder
 
-Basic implementation of smart contracts for NFT tokens and NFT collections in accordance with the [Standard](https://github.com/ton-blockchain/TIPs/issues/62).
+Basic implementation of smart contracts for NFT tokens and NFT collections in accordance with the [Standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0062-nft-standard.md).
 
 `nft-collection.fc` - basic implementation of immutable NFT collection with royalty.
 
@@ -20,7 +20,7 @@ In a real product, marketplace and sale smart contracts are likely to be more so
 
 ## Jettons (Fungible tokens) in `ft` folder
 
-Basic implementation of smart contracts for Jetton wallet and Jetton minter in accordance with the [Standard](https://github.com/ton-blockchain/TIPs/issues/74).
+Basic implementation of smart contracts for Jetton wallet and Jetton minter in accordance with the [Standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md).
 
 Contains an example of a simple ICO smart contract.
 
