@@ -4,7 +4,7 @@ Forward fee calculation supporting different workchains
 
 ;; See crypto/block/transaction.cpp:L1499
 int msg_fwd_fee(slice destination, cell message_body, cell init_state, int max_viewed_cells) inline {
-    (int wc, _) = parse_std_addr(destination);
+    (int workchain, _) = parse_std_addr(destination);
     throw_unless(107, (workchain == -1) | (workchain == 0) );
     int config_index = 25 + workchain;
     slice cfg = config_param(config_index).begin_parse().skip_bits(8);
