@@ -57,7 +57,7 @@ slice calculate_nft_item_address(int wc, cell state_init) {
 
 () send_royalty_params(slice to_address, int query_id, slice data) impure inline {
   var msg = begin_cell()
-    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+    .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 010000
     .store_slice(to_address)
     .store_coins(0)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
