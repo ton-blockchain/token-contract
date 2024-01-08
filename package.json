@@ -3,6 +3,7 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@swc/core": "^1.3.102",
     "@ton/blueprint": "^0.15.0",
     "@ton/core": "^0.53.0",
     "@ton/sandbox": "^0.15.0",
