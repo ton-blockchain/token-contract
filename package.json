@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "test": "jest"
+    "build": "npx blueprint build",
+    "test": "jest",
+    "deploy": "npx blueprint run"
   },
   "devDependencies": {
     "@swc/core": "^1.3.102",
