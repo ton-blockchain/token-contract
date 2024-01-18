@@ -57,7 +57,7 @@
 
       var master_msg = begin_cell()
             .store_uint(op::internal_transfer(), 32)
-            .store_uint(0, 64) ;; quert_id
+            .store_uint(0, 64) ;; query_id
             .store_coins(jetton_amount)
             .store_slice(my_address()) ;; from_address
             .store_slice(sender_address) ;; response_address
