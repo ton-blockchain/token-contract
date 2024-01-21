@@ -3,7 +3,7 @@
 This project allows you to:
 
 1.  Build basic jetton minter contract
-2.  Aims to *hopefully* test any nftcollection contract for compliance with [Jetton standerd](https://github.com/ton-blockchain/TIPs/issues/74)
+2.  Aims to *hopefully* test any nftcollection contract for compliance with [Jetton standard](https://github.com/ton-blockchain/TIPs/issues/74)
 3.  Deploy minter contract via `toncli deploy`
 4.  Manually deploy jetton wallet via minting tokens
 5.  Manually send to other jetton wallets
