@@ -1,4 +1,4 @@
-# Fungible, Non-Fungible, Semi-Fungible Tokens Smart Contracts
+tab# Fungible, Non-Fungible, Semi-Fungible Tokens Smart Contracts
 
 ## NFT (Non-Fungible tokens) in `nft` folder
 
@@ -12,13 +12,13 @@ It is preferable to use an editable collection in case if you decide to change c
 
 `nft-item.fc` - basic implementation of immutable NFT item.
 
-[TonWeb](https://github.com/toncenter/tonweb) JavaScript SDK 0.0.38+ supports these contracts. 
+esc[TonWeb](https://github.com/toncenter/tonweb) JavaScript SDK 0.0.38+ supports these contracts. 
 
 Also repo contains an example of a simple marketplace smart contract `nft-marketplace` and a smart contract for selling NFT for a fixed price for Toncoins `nft-sale`.
 
 In a real product, marketplace and sale smart contracts are likely to be more sophisticated.
 
-## Jettons (Fungible tokens) in `ft` folder
+tab## Jettons (Fungible tokens) in `ft` folder
 
 Basic implementation of smart contracts for Jetton wallet and Jetton minter in accordance with the [Standard](https://github.com/ton-blockchain/TIPs/issues/74).
 
