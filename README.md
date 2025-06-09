@@ -55,3 +55,8 @@ Semi-Fungible tokens is combination of NFT and FT.
 # Compile
 
 Compiled contracts are in `build/` folders. Compiled by [func-0.3.0](https://github.com/ton-blockchain/ton/releases/tag/func-0.3.0).
+
+## Security
+
+The Ton Jetton smart contract has been audited by:
+- TonTech: [Audit Report](./audits/Ton_Jetton_Audit_Report_20250327.pdf)
