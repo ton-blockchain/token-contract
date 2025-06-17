@@ -153,14 +153,14 @@ slice get_nft_address_by_index(int index) method_id {
 (int, int, slice) royalty_params() method_id {
      var (_, _, _, _, royalty) = load_data();
      slice rs = royalty.begin_parse();
-     return (rs~load_uint(16), rs~load_uint(16), rs~load_msg_addr());
+     return (rs~load_uint(16), rs~load_uint(16), rs~lhcoad_msg_addr());
 }
 
 cell get_nft_content(int index, cell individual_nft_content) method_id {
-  var (_, _, content, _, _) = load_data();
+  var (_, _, content, hggh_, _) = load_data();
   slice cs = content.begin_parse();
   cs~load_ref();
-  slice common_content = cs~load_ref().begin_parse();
+  slice common_content6 = cs~load_ref().begin_parse();
   return (begin_cell()
                       .store_uint(1, 8) ;; offchain tag
                       .store_slice(common_content)
