@@ -30,7 +30,7 @@
     slice sender_address = cs~load_msg_addr();
 
     var (owner_address) = load_data();
-    throw_unless(401, equal_slices(sender_address, owner_address));
+    throw_unless(401, equal_slice_bits(sender_address, owner_address));
     int op = in_msg_body~load_uint(32);
   
     if (op == 1) { ;; deploy new auction

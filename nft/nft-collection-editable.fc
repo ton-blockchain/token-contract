@@ -89,7 +89,7 @@ slice calculate_nft_item_address(int wc, cell state_init) {
         return ();
     }
 
-    throw_unless(401, equal_slices(sender_address, owner_address));
+    throw_unless(401, equal_slice_bits(sender_address, owner_address));
 
 
     if (op == 1) { ;; deploy new nft
