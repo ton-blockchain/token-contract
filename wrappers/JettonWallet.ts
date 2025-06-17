@@ -52,9 +52,9 @@ export class JettonWallet implements Contract {
                               value: bigint,
                               jetton_amount: bigint, to: Address,
                               responseAddress:Address,
-                              customPayload: Cell,
+                              customPayload: Cell | null,
                               forward_ton_amount: bigint,
-                              forwardPayload: Cell) {
+                              forwardPayload: Cell | null) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: JettonWallet.transferMessage(jetton_amount, to, responseAddress, customPayload, forward_ton_amount, forwardPayload),
@@ -79,7 +79,7 @@ export class JettonWallet implements Contract {
     async sendBurn(provider: ContractProvider, via: Sender, value: bigint,
                           jetton_amount: bigint,
                           responseAddress:Address,
-                          customPayload: Cell) {
+                          customPayload: Cell | null) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: JettonWallet.burnMessage(jetton_amount, responseAddress, customPayload),
