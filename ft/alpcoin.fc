@@ -1,0 +1,4 @@
+;; Alpcoin Jetton Contract - boshlang'ich
+() => {
+  throw("Alpcoin Jetton kontrakti tayyorlanmoqda.");
+}

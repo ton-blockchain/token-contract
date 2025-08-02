@@ -1,0 +1,14 @@
+{
+  "name": "Alpcoin",
+  "symbol": "ALP",
+  "description": "Alpcoin is a humanitarian utility token built on TON blockchain.",
+  "image": "https://i.postimg.cc/RZSN0MPJ/id53b3.jpg",
+  "decimals": 9,
+  "amount_style": "suffix",
+  "social": {
+    "website": "https://yshohruh093-createj.github.io/Alpcoin",
+    "twitter": "https://twitter.com/AlpcoinGlobal",
+    "instagram": "https://www.instagram.com/alpcoinofficial",
+    "youtube": "https://youtube.com/@alpcoinofficial"
+  }
+}
